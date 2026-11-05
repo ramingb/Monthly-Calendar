@@ -39,6 +39,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body {
   background: var(--bg);
@@ -159,13 +160,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); o
 .seg span { display: block; padding: 5px 14px; border-radius: 8px; cursor: pointer; font-size: .88rem; }
 .seg input:checked + span { background: var(--surface); box-shadow: var(--shadow); font-weight: 600; }
 .seg input:focus-visible + span { outline: 2px solid var(--primary); }
+.remind-box { display: flex; flex-direction: column; gap: 4px; }
+.remind-box .row { flex-wrap: nowrap; }
+.remind-box .field { min-width: 0; }
+.remind-preview { margin: 0; font-size: .78rem; color: var(--primary); min-height: 1.1em; }
+.remind-preview.past { color: var(--sun); }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 .upcoming { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 14px; }
 .upcoming ul { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .85rem; }
 .upcoming li { display: flex; gap: 8px; cursor: pointer; padding: 3px 4px; border-radius: 6px; }
 .upcoming li:hover { background: var(--surface-2); }
-.upcoming .d { color: var(--muted); flex: none; width: 6.5em; }
+.upcoming .d { color: var(--muted); flex: none; width: 8.2em; white-space: nowrap; }
 .upcoming .done { text-decoration: line-through; color: var(--muted); }
 
 /* ── 설정 다이얼로그 ── */
@@ -183,3 +189,67 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
   transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── 달력 하단 월별 목록 ── */
+.main-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.month-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 600px) { .month-lists { grid-template-columns: 1fr; } }
+.mlist { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; min-width: 0; }
+.mlist h3 { margin: 0 0 8px; font-size: 1rem; display: flex; align-items: baseline; gap: 8px; }
+.mlist h3 small { font-size: .78rem; font-weight: 500; color: var(--muted); }
+.mlist ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mrow { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-top: 1px solid var(--line); font-size: .88rem; }
+.mrow:first-child { border-top: 0; }
+.mrow input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); flex: none; cursor: pointer; }
+.mrow .mdate { flex: none; width: 5.8em; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mrow .mdate.sun, .mrow .mdate.holiday { color: var(--sun); }
+.mrow .mdate.sat { color: var(--sat); }
+.mrow .mbody { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 6px; }
+.mrow .mbody:hover .mtitle { text-decoration: underline; }
+.mrow .mbar { width: 3px; height: 1.1em; border-radius: 2px; flex: none; }
+.mrow .mbar.appt { background: var(--appt); }
+.mrow .mbar.todo { background: var(--todo); }
+.mrow .mtime { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.mrow .mtitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mrow.done .mtitle { text-decoration: line-through; color: var(--muted); }
+.mrow .mbell { flex: none; font-size: .75rem; opacity: .7; }
+.mrow.hol { color: var(--sun); font-size: .82rem; }
+.mrow.hol .mbody { cursor: pointer; }
+.mempty { color: var(--muted); font-size: .85rem; padding: 6px 4px; }
+.mrow.cont { border-top: 0; padding-top: 0; }
+
+/* ── 카테고리 ── */
+.chip.has-cat { background: var(--cat-soft); border-color: var(--cat); }
+.item.has-cat { border-color: var(--cat); }
+.mrow .mbar.has-cat { background: var(--cat); }
+@media (max-width: 600px) { .chip.has-cat { background: var(--cat); } }
+.cat-tag {
+  display: inline-block; font-size: .72rem; line-height: 1.5; padding: 0 7px; border-radius: 999px; flex: none;
+  background: var(--cat-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--cat); white-space: nowrap;
+}
+.cat-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; display: inline-block; }
+.cat-dot.empty { box-shadow: inset 0 0 0 1.5px var(--line); }
+.cat-dot.sm { width: 8px; height: 8px; align-self: center; }
+.cat-dot.sm.appt { background: var(--appt); }
+.cat-dot.sm.todo { background: var(--todo); }
+.cat-dot.sm.has-cat, .cat-dot.has-cat { background: var(--cat); }
+.cat-select { display: flex; align-items: center; gap: 8px; }
+.cat-select select { flex: 1; min-width: 0; }
+.btn.small { padding: 4px 9px; font-size: .8rem; border-radius: 8px; }
+.legend { flex-wrap: wrap; align-items: center; }
+.cat-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow: auto; }
+.cat-row { display: flex; align-items: center; gap: 8px; }
+.cat-row input[type=text] { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 10px; }
+.cat-count { font-size: .78rem; color: var(--muted); flex: none; min-width: 2.5em; text-align: right; }
+input[type=color] {
+  -webkit-appearance: none; appearance: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%;
+  background: none; cursor: pointer; flex: none;
+}
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type=color]::-webkit-color-swatch { border: 2px solid var(--line); border-radius: 50%; }
+input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-radius: 50%; }
+.cat-new { border-top: 1px solid var(--line); padding-top: 12px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+.swatch.on { outline: 2px solid var(--text); outline-offset: 2px; }
+.upcoming li { align-items: center; }

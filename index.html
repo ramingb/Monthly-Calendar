@@ -23,17 +23,26 @@
     </header>
 
     <main class="layout">
+      <div class="main-col">
       <section class="calendar" aria-label="달력">
         <div class="weekdays">
           <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
         </div>
         <div class="grid" id="grid"></div>
-        <div class="legend">
-          <span><i class="dot appt"></i>약속</span>
-          <span><i class="dot todo"></i>할 일</span>
-          <span><i class="dot holiday"></i>공휴일</span>
-        </div>
+        <div class="legend" id="legend"></div>
       </section>
+
+        <section class="month-lists" aria-label="월별 일정 목록">
+          <div class="mlist">
+            <h3 id="listTitleThis"></h3>
+            <ul id="listThis"></ul>
+          </div>
+          <div class="mlist">
+            <h3 id="listTitleNext"></h3>
+            <ul id="listNext"></ul>
+          </div>
+        </section>
+      </div>
 
       <aside class="panel" id="panel">
         <div class="panel-head">
@@ -51,20 +60,35 @@
             <label><input type="radio" name="type" value="todo"><span>할 일</span></label>
           </div>
           <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
+          <label class="field">카테고리
+            <span class="cat-select">
+              <i class="cat-dot" id="catDot"></i>
+              <select name="category" id="catSelect"></select>
+              <button type="button" class="btn ghost small" id="catManageBtn">관리</button>
+            </span>
+          </label>
           <div class="row">
             <label class="field">날짜<input type="date" name="date" required></label>
             <label class="field">시간<input type="time" name="time"></label>
           </div>
-          <label class="field">카톡 알림
-            <select name="remind">
-              <option value="-1">알림 없음</option>
-              <option value="0">당일 아침</option>
-              <option value="1" selected>1일 전</option>
-              <option value="2">2일 전</option>
-              <option value="3">3일 전</option>
-              <option value="7">1주일 전</option>
-            </select>
-          </label>
+          <div class="remind-box">
+            <label class="field">카톡 알림
+                <select name="remind">
+                  <option value="-1">알림 없음</option>
+                  <option value="0">당일</option>
+                  <option value="1" selected>1일 전</option>
+                  <option value="2">2일 전</option>
+                  <option value="3">3일 전</option>
+                  <option value="7">1주일 전</option>
+                  <option value="custom">날짜 직접 지정</option>
+                </select>
+            </label>
+            <div class="row">
+              <label class="field" id="remindDateField" hidden>알림 날짜<input type="date" name="remindDate"></label>
+              <label class="field" id="remindTimeField">알림 시간<input type="time" name="remindTime" value="08:00"></label>
+            </div>
+            <p class="remind-preview" id="remindPreview"></p>
+          </div>
           <textarea name="memo" rows="2" placeholder="메모 (선택)" maxlength="300"></textarea>
           <div class="form-actions">
             <button type="button" class="btn ghost" id="cancelEdit" hidden>취소</button>
@@ -88,7 +112,7 @@
         <h3>카카오톡 알림 연동 (GitHub 동기화)</h3>
         <p class="hint">
           일정을 이 저장소의 <code>data/schedule.json</code>에 자동 저장하면,
-          GitHub Actions가 매일 아침 8시(한국시간)에 알림 대상 일정을 카카오톡 "나와의 채팅"으로 보내요.
+          GitHub Actions가 15분마다 확인해서 일정마다 정한 알림 시간에 카카오톡 "나와의 채팅"으로 보내요.
           설정 방법은 README를 참고하세요.
         </p>
         <label class="field">저장소 (owner/repo)<input name="repo" placeholder="ramingb/Monthly-Calendar"></label>
@@ -112,6 +136,26 @@
       <div class="form-actions">
         <button value="cancel" class="btn ghost">닫기</button>
         <button value="save" class="btn primary" id="saveSettings">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="catDialog">
+    <form method="dialog" class="settings-body" id="catForm">
+      <h2>카테고리 관리</h2>
+      <p class="hint">카테고리와 색상은 원하는 만큼 만들 수 있어요. 색 동그라미를 누르면 어떤 색이든 고를 수 있어요.</p>
+      <ul class="cat-list" id="catList"></ul>
+      <section class="cat-new">
+        <h3>새 카테고리</h3>
+        <div class="cat-row">
+          <input type="color" id="newCatColor" value="#2f6fed" aria-label="새 카테고리 색상">
+          <input type="text" id="newCatName" placeholder="이름 (예: 업무, 가족, 운동)" maxlength="20">
+          <button type="button" class="btn primary" id="addCatBtn">추가</button>
+        </div>
+        <div class="swatches" id="swatches" aria-label="추천 색상"></div>
+      </section>
+      <div class="form-actions">
+        <button value="close" class="btn ghost">닫기</button>
       </div>
     </form>
   </dialog>
