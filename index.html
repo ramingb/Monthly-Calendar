@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>먼슬리 캘린더</title>
+  <meta name="theme-color" content="#2f6fed">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="nav">
+        <button class="icon-btn" id="prevBtn" aria-label="이전 달">‹</button>
+        <h1 id="monthTitle" class="month-title"></h1>
+        <button class="icon-btn" id="nextBtn" aria-label="다음 달">›</button>
+        <button class="btn ghost" id="todayBtn">오늘</button>
+      </div>
+      <div class="actions">
+        <span class="sync-status" id="syncStatus" hidden></span>
+        <button class="btn ghost" id="settingsBtn">⚙︎ 설정</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="calendar" aria-label="달력">
+        <div class="weekdays">
+          <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="legend">
+          <span><i class="dot appt"></i>약속</span>
+          <span><i class="dot todo"></i>할 일</span>
+          <span><i class="dot holiday"></i>공휴일</span>
+        </div>
+      </section>
+
+      <aside class="panel" id="panel">
+        <div class="panel-head">
+          <h2 id="panelDate"></h2>
+          <p id="panelHoliday" class="panel-holiday"></p>
+        </div>
+
+        <ul class="items" id="itemList"></ul>
+        <p class="empty" id="emptyMsg">등록된 일정이 없어요.</p>
+
+        <form class="add-form" id="addForm" autocomplete="off">
+          <h3 id="formTitle">일정 추가</h3>
+          <div class="seg" role="radiogroup" aria-label="종류">
+            <label><input type="radio" name="type" value="appt" checked><span>약속</span></label>
+            <label><input type="radio" name="type" value="todo"><span>할 일</span></label>
+          </div>
+          <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
+          <div class="row">
+            <label class="field">날짜<input type="date" name="date" required></label>
+            <label class="field">시간<input type="time" name="time"></label>
+          </div>
+          <label class="field">카톡 알림
+            <select name="remind">
+              <option value="-1">알림 없음</option>
+              <option value="0">당일 아침</option>
+              <option value="1" selected>1일 전</option>
+              <option value="2">2일 전</option>
+              <option value="3">3일 전</option>
+              <option value="7">1주일 전</option>
+            </select>
+          </label>
+          <textarea name="memo" rows="2" placeholder="메모 (선택)" maxlength="300"></textarea>
+          <div class="form-actions">
+            <button type="button" class="btn ghost" id="cancelEdit" hidden>취소</button>
+            <button type="submit" class="btn primary" id="submitBtn">추가</button>
+          </div>
+        </form>
+
+        <div class="upcoming">
+          <h3>다가오는 7일</h3>
+          <ul id="upcomingList"></ul>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="settings">
+    <form method="dialog" class="settings-body" id="settingsForm">
+      <h2>설정</h2>
+
+      <section>
+        <h3>카카오톡 알림 연동 (GitHub 동기화)</h3>
+        <p class="hint">
+          일정을 이 저장소의 <code>data/schedule.json</code>에 자동 저장하면,
+          GitHub Actions가 매일 아침 8시(한국시간)에 알림 대상 일정을 카카오톡 "나와의 채팅"으로 보내요.
+          설정 방법은 README를 참고하세요.
+        </p>
+        <label class="field">저장소 (owner/repo)<input name="repo" placeholder="ramingb/Monthly-Calendar"></label>
+        <label class="field">브랜치<input name="branch" placeholder="main"></label>
+        <label class="field">GitHub 토큰 (Contents 쓰기 권한)<input name="token" type="password" placeholder="github_pat_..."></label>
+        <p class="hint">토큰은 이 브라우저에만 저장되며 GitHub API 외에는 전송되지 않아요.</p>
+        <div class="row">
+          <button type="button" class="btn ghost" id="pullBtn">GitHub에서 불러오기</button>
+          <button type="button" class="btn ghost" id="pushBtn">지금 업로드</button>
+        </div>
+      </section>
+
+      <section>
+        <h3>백업</h3>
+        <div class="row">
+          <button type="button" class="btn ghost" id="exportBtn">JSON 내보내기</button>
+          <label class="btn ghost file-btn">JSON 가져오기<input type="file" id="importFile" accept="application/json" hidden></label>
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <button value="cancel" class="btn ghost">닫기</button>
+        <button value="save" class="btn primary" id="saveSettings">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/holidays.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
