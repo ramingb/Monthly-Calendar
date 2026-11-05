@@ -813,7 +813,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, Math.min(9000, Math.max(2200, msg.length * 70)));
   }
 
   // ── GitHub 동기화 (카톡 알림용) ──────────────────────
@@ -850,12 +850,50 @@
     });
   }
 
+  /** GitHub 오류를 사람이 이해할 수 있는 설명으로 */
+  function ghError(res) {
+    return res.json().catch(function () { return {}; }).then(function (body) {
+      var msg = (body && body.message) || '';
+      var why;
+      if (res.status === 401) why = '토큰이 올바르지 않거나 만료됐어요. 토큰을 다시 복사해 넣어 주세요.';
+      else if (res.status === 403) why = /rate limit/i.test(msg)
+        ? 'GitHub 요청 한도를 넘었어요. 잠시 후 다시 시도해 주세요.'
+        : '토큰에 쓰기 권한이 없어요. 토큰 설정에서 Contents를 "Read and write"로 바꿔 주세요.';
+      else if (res.status === 404) why = '저장소를 찾을 수 없어요. 저장소 이름(' + settings.repo + ')과, 토큰에서 이 저장소를 선택했는지 확인해 주세요.';
+      else if (res.status === 409) why = '다른 기기와 동시에 저장돼 충돌했어요. 잠시 후 다시 시도해 주세요.';
+      else if (res.status === 422) why = '브랜치 이름(' + (settings.branch || 'main') + ')을 확인해 주세요.';
+      else why = '알 수 없는 오류예요.';
+      var e = new Error(why + ' (GitHub ' + res.status + (msg ? ': ' + msg : '') + ')');
+      e.status = res.status;
+      throw e;
+    });
+  }
+  function netError(err) {
+    if (err && err.status) throw err;
+    var e = new Error('인터넷 연결을 확인해 주세요. (' + (err && err.message) + ')');
+    throw e;
+  }
+
+  var lastSyncError = '';
+  function syncFailed(err) {
+    lastSyncError = err.message;
+    setSyncStatus('⚠︎ 동기화 실패');
+    $('syncStatus').title = err.message + '\n(눌러서 자세히 보기)';
+    console.error(err);
+  }
+  $('syncStatus').addEventListener('click', function () { if (lastSyncError) alert('동기화 실패 이유\n\n' + lastSyncError); });
+
   function ghGet() {
     return ghRequest('GET').then(function (res) {
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error('GitHub ' + res.status);
-      return res.json();
-    });
+      if (res.ok) return res.json();
+      if (res.status === 404) {
+        // 파일이 없어서인지, 저장소 접근이 안 돼서인지 구분
+        return fetch('https://api.github.com/repos/' + settings.repo, {
+          headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + settings.token }, cache: 'no-store'
+        }).then(function (r) { if (r.ok) return null; return ghError(r); });
+      }
+      return ghError(res);
+    }, netError);
   }
 
   function pushToGitHub() {
@@ -870,11 +908,12 @@
         sha: file ? file.sha : undefined
       });
     }).then(function (res) {
-      if (!res.ok) throw new Error('GitHub ' + res.status);
+      if (!res.ok) return ghError(res);
+      lastSyncError = '';
+      $('syncStatus').title = '';
       setSyncStatus('☁︎ 동기화됨');
-    }).catch(function (err) {
-      setSyncStatus('⚠︎ 동기화 실패');
-      console.error(err);
+    }, netError).catch(function (err) {
+      syncFailed(err);
       throw err;
     });
   }
@@ -905,7 +944,7 @@
       setSyncStatus('☁︎ 동기화됨');
       if (!auto) toast('GitHub에서 ' + remote.items.length + '개 일정을 불러왔어요.');
     }).catch(function (err) {
-      setSyncStatus('⚠︎ 동기화 실패');
+      syncFailed(err);
       toast('동기화 실패: ' + err.message);
     });
   }
@@ -929,7 +968,9 @@
     if (!syncEnabled()) return;
     setSyncStatus('변경됨…');
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(function () { pushToGitHub().catch(function () {}); }, 1500);
+    syncTimer = setTimeout(function () {
+      pushToGitHub().catch(function (err) { toast('동기화 실패: ' + err.message); });
+    }, 1500);
   }
 
   // ── 설정 다이얼로그 ──────────────────────────────────
