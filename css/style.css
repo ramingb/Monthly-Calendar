@@ -189,3 +189,31 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
   transition: opacity .2s, transform .2s; max-width: calc(100vw - 32px);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ── 달력 하단 월별 목록 ── */
+.main-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.month-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 600px) { .month-lists { grid-template-columns: 1fr; } }
+.mlist { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; min-width: 0; }
+.mlist h3 { margin: 0 0 8px; font-size: 1rem; display: flex; align-items: baseline; gap: 8px; }
+.mlist h3 small { font-size: .78rem; font-weight: 500; color: var(--muted); }
+.mlist ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mrow { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-top: 1px solid var(--line); font-size: .88rem; }
+.mrow:first-child { border-top: 0; }
+.mrow input[type=checkbox] { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); flex: none; cursor: pointer; }
+.mrow .mdate { flex: none; width: 5.8em; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mrow .mdate.sun, .mrow .mdate.holiday { color: var(--sun); }
+.mrow .mdate.sat { color: var(--sat); }
+.mrow .mbody { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 6px; }
+.mrow .mbody:hover .mtitle { text-decoration: underline; }
+.mrow .mbar { width: 3px; height: 1.1em; border-radius: 2px; flex: none; }
+.mrow .mbar.appt { background: var(--appt); }
+.mrow .mbar.todo { background: var(--todo); }
+.mrow .mtime { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.mrow .mtitle { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mrow.done .mtitle { text-decoration: line-through; color: var(--muted); }
+.mrow .mbell { flex: none; font-size: .75rem; opacity: .7; }
+.mrow.hol { color: var(--sun); font-size: .82rem; }
+.mrow.hol .mbody { cursor: pointer; }
+.mempty { color: var(--muted); font-size: .85rem; padding: 6px 4px; }
+.mrow.cont { border-top: 0; padding-top: 0; }

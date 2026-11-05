@@ -148,6 +148,7 @@
 
       grid.appendChild(cell);
     }
+    renderLists();
   }
 
   // ── 사이드 패널 ───────────────────────────────────────
@@ -213,6 +214,78 @@
       li.addEventListener('click', function () { select(it.date, true); });
       ul.appendChild(li);
     });
+  }
+
+  // ── 달력 하단: 이번 달 / 다음 달 목록 ─────────────────
+  function renderMonthList(year, month, titleEl, listEl) {
+    var prefix = year + '-' + pad(month + 1) + '-';
+    var items = data.items.filter(function (it) { return it.date.indexOf(prefix) === 0; }).sort(sortItems);
+    var doneCount = items.filter(function (it) { return it.done; }).length;
+
+    titleEl.textContent = '';
+    titleEl.appendChild(document.createTextNode((year !== view.getFullYear() ? year + '년 ' : '') + (month + 1) + '월 일정'));
+    if (items.length) titleEl.appendChild(el('small', null, '완료 ' + doneCount + ' / ' + items.length));
+
+    // 공휴일도 목록에 함께 표시
+    var hols = H.getHolidays(year);
+    var rows = items.map(function (it) { return { date: it.date, item: it }; });
+    Object.keys(hols).forEach(function (d) {
+      if (d.indexOf(prefix) === 0) rows.push({ date: d, hol: hols[d].join(' · ') });
+    });
+    rows.sort(function (a, b) {
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return a.hol ? -1 : b.hol ? 1 : 0;
+    });
+
+    listEl.textContent = '';
+    if (!items.length) {
+      listEl.appendChild(el('li', 'mempty', '등록된 일정이 없어요.'));
+    }
+    var lastDate = null;
+    rows.forEach(function (r) {
+      var d = parse(r.date);
+      var li = el('li', 'mrow' + (r.hol ? ' hol' : '') + (r.item && r.item.done ? ' done' : '') + (r.date === lastDate ? ' cont' : ''));
+      var dateCls = 'mdate' + (H.holidayNames(r.date).length ? ' holiday' : d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '');
+      li.appendChild(el('span', dateCls, r.date === lastDate ? '' : (d.getMonth() + 1) + '/' + d.getDate() + ' (' + WEEK[d.getDay()] + ')'));
+      lastDate = r.date;
+
+      var body = el('span', 'mbody');
+      if (r.hol) {
+        body.appendChild(el('span', 'mtitle', '🎌 ' + r.hol));
+      } else {
+        var it = r.item;
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!it.done;
+        cb.setAttribute('aria-label', it.title + ' 완료');
+        cb.addEventListener('change', function () { toggleDone(it.id); });
+        li.insertBefore(cb, li.firstChild);
+        body.appendChild(el('span', 'mbar ' + it.type));
+        if (it.time) body.appendChild(el('span', 'mtime', it.time));
+        var t = el('span', 'mtitle', it.title);
+        t.title = it.title;
+        body.appendChild(t);
+        if (remindAtOf(it) && !it.done) {
+          var bell = el('span', 'mbell', '🔔');
+          bell.title = fmtRemind(remindAtOf(it)) + ' 카톡 알림';
+          body.appendChild(bell);
+        }
+      }
+      body.addEventListener('click', function () {
+        select(r.date, true);
+        if (window.matchMedia('(max-width: 900px)').matches) $('panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      li.appendChild(body);
+      if (r.hol) li.insertBefore(el('span', 'mbar'), li.firstChild).style.width = '16px';
+      listEl.appendChild(li);
+    });
+  }
+
+  function renderLists() {
+    var y = view.getFullYear(), m = view.getMonth();
+    var next = new Date(y, m + 1, 1);
+    renderMonthList(y, m, $('listTitleThis'), $('listThis'));
+    renderMonthList(next.getFullYear(), next.getMonth(), $('listTitleNext'), $('listNext'));
   }
 
   function render() { renderCalendar(); renderPanel(); }

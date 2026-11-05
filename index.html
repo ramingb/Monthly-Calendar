@@ -23,6 +23,7 @@
     </header>
 
     <main class="layout">
+      <div class="main-col">
       <section class="calendar" aria-label="달력">
         <div class="weekdays">
           <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
@@ -34,6 +35,18 @@
           <span><i class="dot holiday"></i>공휴일</span>
         </div>
       </section>
+
+        <section class="month-lists" aria-label="월별 일정 목록">
+          <div class="mlist">
+            <h3 id="listTitleThis"></h3>
+            <ul id="listThis"></ul>
+          </div>
+          <div class="mlist">
+            <h3 id="listTitleNext"></h3>
+            <ul id="listNext"></ul>
+          </div>
+        </section>
+      </div>
 
       <aside class="panel" id="panel">
         <div class="panel-head">
