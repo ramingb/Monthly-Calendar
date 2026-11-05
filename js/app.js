@@ -424,7 +424,7 @@
     apSel.className = 'tp-ap';
     if (optional) { var o = el('option', null, '시간 없음'); o.value = ''; apSel.appendChild(o); }
     [['am', '오전'], ['pm', '오후']].forEach(function (a) { var oa = el('option', null, a[1]); oa.value = a[0]; apSel.appendChild(oa); });
-    [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(function (h) {
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].forEach(function (h) {
       var oh = el('option', null, h + '시'); oh.value = String(h); hSel.appendChild(oh);
     });
     function fillMinutes(extra) {
