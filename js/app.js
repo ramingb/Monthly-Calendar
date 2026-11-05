@@ -278,7 +278,22 @@
       var ra = remindAtOf(it);
       if (ra) meta.appendChild(el('span', null, '💬 ' + fmtRemind(ra) + ' 알림'));
       body.appendChild(meta);
-      if (it.memo) body.appendChild(el('div', 'item-memo', it.memo));
+      if (it.memo) {
+        var memo = el('div', 'item-memo', it.memo);
+        body.appendChild(memo);
+        // 긴 메모는 4줄까지만 보이고 '더보기'로 펼침
+        requestAnimationFrame(function () {
+          if (memo.scrollHeight > memo.clientHeight + 2) {
+            var more = el('button', 'memo-more', '더보기');
+            more.type = 'button';
+            more.addEventListener('click', function () {
+              var open = memo.classList.toggle('open');
+              more.textContent = open ? '접기' : '더보기';
+            });
+            body.appendChild(more);
+          }
+        });
+      }
       li.appendChild(body);
 
       var acts = el('div', 'item-actions');
@@ -467,6 +482,14 @@
     timePickers[name].set(hidden.value);
   }
   function setTime(name, v) { timePickers[name].set(v); }
+
+  // ── 메모 입력칸: 내용에 맞춰 자동으로 늘어남 ─────────
+  function autoGrowMemo() {
+    var ta = $('addForm').elements.memo;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, 420) + 'px';
+  }
+  $('addForm').elements.memo.addEventListener('input', autoGrowMemo);
 
   // ── 여러 날 입력 ─────────────────────────────────────
   function updateSpanUI() {
@@ -683,6 +706,7 @@
     setTime('remindTime', ra ? ra.slice(11, 16) : DEFAULT_REMIND_TIME);
     f.remindDate.value = ra ? ra.slice(0, 10) : '';
     f.memo.value = it.memo || '';
+    autoGrowMemo();
     fillCategorySelect(catById(it.categoryId) ? it.categoryId : '');
     updateRemindUI();
     $('formTitle').textContent = '일정 수정';
@@ -701,6 +725,7 @@
     form.elements.date.value = selected;
     setTime('time', '');
     setTime('remindTime', DEFAULT_REMIND_TIME);
+    autoGrowMemo();
     updateSpanUI();
     updateRemindUI();
     $('formTitle').textContent = '일정 추가';
