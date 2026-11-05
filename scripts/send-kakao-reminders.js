@@ -85,7 +85,9 @@ function buildLines(items, categories = []) {
   return items.map((it) => {
     const icon = it.type === 'todo' ? '✅' : '📌';
     const hol = H.holidayNames(it.date);
-    const when = `${label(it.date)}${it.time ? ' ' + it.time : ''}`;
+    const multi = it.endDate && it.endDate > it.date;
+    const range = multi ? `${label(it.date)}~${label(it.endDate)}(${diffDays(it.date, it.endDate) + 1}일)` : label(it.date);
+    const when = `${range}${it.time ? ' ' + it.time : ''}`;
     const cat = catName[it.categoryId] ? `[${catName[it.categoryId]}] ` : '';
     return `${icon} [${relDay(it.left)}] ${when} ${cat}${it.title}${hol.length ? ` (${hol[0]})` : ''}`;
   });

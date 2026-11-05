@@ -55,19 +55,20 @@
 
         <form class="add-form" id="addForm" autocomplete="off">
           <h3 id="formTitle">일정 추가</h3>
-          <div class="seg" role="radiogroup" aria-label="종류">
-            <label><input type="radio" name="type" value="appt" checked><span>약속</span></label>
-            <label><input type="radio" name="type" value="todo"><span>할 일</span></label>
-          </div>
-          <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
           <div class="field">
             <span class="field-label">카테고리 <button type="button" class="link-btn" id="catManageBtn">관리</button></span>
             <div class="cat-picker" id="catPicker" role="radiogroup" aria-label="카테고리"></div>
             <input type="hidden" name="category" id="catValue" value="">
           </div>
+          <input type="hidden" name="type" value="appt">
+          <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
           <div class="row">
-            <label class="field">날짜<input type="date" name="date" required></label>
-            <label class="field">시간<input type="time" name="time"></label>
+            <label class="field">시작일<input type="date" name="date" required></label>
+            <label class="field"><span class="field-label">종료일 <small id="spanHint" class="span-hint"></small></span><input type="date" name="endDate"></label>
+          </div>
+          <div class="field">시간
+            <input type="hidden" name="time" value="">
+            <span class="tp" data-for="time" data-optional="1"></span>
           </div>
           <div class="remind-box">
             <label class="field">카톡 알림
@@ -83,7 +84,10 @@
             </label>
             <div class="row">
               <label class="field" id="remindDateField" hidden>알림 날짜<input type="date" name="remindDate"></label>
-              <label class="field" id="remindTimeField">알림 시간<input type="time" name="remindTime" value="08:00"></label>
+              <div class="field" id="remindTimeField">알림 시간
+                <input type="hidden" name="remindTime" value="08:00">
+                <span class="tp" data-for="remindTime"></span>
+              </div>
             </div>
             <p class="remind-preview" id="remindPreview"></p>
           </div>
