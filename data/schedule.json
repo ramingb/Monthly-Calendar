@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793866318077,
+  "updatedAt": 1793870352038,
   "categories": [
     {
       "id": "cmw35ck3xw730at",
@@ -33,21 +33,6 @@
       "done": false,
       "createdAt": 1793863603420,
       "endDate": "2026-12-06"
-    },
-    {
-      "type": "appt",
-      "title": "퇴근준비",
-      "date": "2026-11-06",
-      "endDate": "",
-      "time": "18:00",
-      "remind": "custom",
-      "remindAt": "2026-11-05T17:20",
-      "categoryId": "cmw35ck3xw730at",
-      "memo": "",
-      "updatedAt": 1793866318075,
-      "id": "mw39otmjucxznv",
-      "done": false,
-      "createdAt": 1793866318075
     }
   ]
 }
