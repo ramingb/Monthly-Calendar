@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793887042602,
+  "updatedAt": 1793887152609,
   "categories": [
     {
       "id": "cmw35ck3xw730at",
@@ -38,6 +38,21 @@
       "done": false,
       "createdAt": 1793863603420,
       "endDate": "2026-12-06"
+    },
+    {
+      "type": "appt",
+      "title": "과제하기",
+      "date": "2026-11-06",
+      "endDate": "",
+      "time": "12:30",
+      "remind": 0,
+      "remindAt": "2026-11-06T12:20",
+      "categoryId": "cmw3m10rtgl3ls8",
+      "memo": "",
+      "updatedAt": 1793887152606,
+      "id": "mw3m3dni14fm88",
+      "done": false,
+      "createdAt": 1793887152606
     }
   ]
 }
