@@ -68,7 +68,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (max-width: 600px) { .btn-text { display: none; } }
 .month-title { font-size: 1.5rem; margin: 0 6px; min-width: 9ch; text-align: center; font-weight: 700; letter-spacing: -.02em; }
 .actions { display: flex; align-items: center; gap: 8px; }
-.sync-status { font-size: .8rem; color: var(--muted); }
+.sync-status { font-size: .8rem; color: var(--muted); cursor: pointer; }
 
 .btn, .icon-btn {
   border: 1px solid var(--line); background: var(--surface); border-radius: 10px;
