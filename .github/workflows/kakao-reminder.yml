@@ -1,0 +1,32 @@
+name: 카카오톡 일정 알림
+
+on:
+  schedule:
+    # 매일 08:00 KST (= 23:00 UTC 전날)
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '전송 없이 메시지만 확인'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 알림 전송
+        run: node scripts/send-kakao-reminders.js
+        env:
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          CALENDAR_URL: ${{ vars.CALENDAR_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
