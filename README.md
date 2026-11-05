@@ -38,7 +38,9 @@
 
 1. [카카오 디벨로퍼스](https://developers.kakao.com) 로그인 → **내 애플리케이션 → 애플리케이션 추가하기**
 2. **앱 키**에서 `REST API 키` 복사
-3. **카카오 로그인** 활성화 ON, **Redirect URI**에 `https://localhost` 등록
+3. **카카오 로그인** 활성화 ON, **리다이렉트 URI**에 `https://localhost` 등록
+   - 현재 콘솔: **앱 → 플랫폼 키 → REST API 키**(대표 키) 선택 → **카카오 로그인 리다이렉트 URI**에 추가
+   - 이전 콘솔: **제품 설정 → 카카오 로그인 → Redirect URI**
 4. **동의항목**에서 `카카오톡 메시지 전송(talk_message)` 을 "선택 동의"로 설정
 5. (선택) **보안 → Client Secret**을 사용 중이면 값을 복사해 두기
 
