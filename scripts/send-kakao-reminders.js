@@ -80,12 +80,14 @@ function dueItems(items, now, sent) {
     .sort((a, b) => (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')));
 }
 
-function buildLines(items) {
+function buildLines(items, categories = []) {
+  const catName = Object.fromEntries(categories.map((c) => [c.id, c.name]));
   return items.map((it) => {
     const icon = it.type === 'todo' ? '✅' : '📌';
     const hol = H.holidayNames(it.date);
     const when = `${label(it.date)}${it.time ? ' ' + it.time : ''}`;
-    return `${icon} [${relDay(it.left)}] ${when} ${it.title}${hol.length ? ` (${hol[0]})` : ''}`;
+    const cat = catName[it.categoryId] ? `[${catName[it.categoryId]}] ` : '';
+    return `${icon} [${relDay(it.left)}] ${when} ${cat}${it.title}${hol.length ? ` (${hol[0]})` : ''}`;
   });
 }
 
@@ -171,7 +173,7 @@ async function main() {
   if (!items.length) return;
 
   const header = `🔔 일정 알림 · ${label(now.slice(0, 10))}`;
-  const messages = chunk(header, buildLines(items));
+  const messages = chunk(header, buildLines(items, Array.isArray(data.categories) ? data.categories : []));
 
   if (process.env.DRY_RUN) { messages.forEach((m) => console.log('---\n' + m)); return; }
 

@@ -69,9 +69,12 @@
   function loadData() {
     try {
       var raw = JSON.parse(safeGet(STORE_KEY) || 'null');
-      if (raw && Array.isArray(raw.items)) return raw;
+      if (raw && Array.isArray(raw.items)) {
+        if (!Array.isArray(raw.categories)) raw.categories = [];
+        return raw;
+      }
     } catch (e) { /* 손상된 데이터는 무시 */ }
-    return { version: 1, updatedAt: 0, items: [] };
+    return { version: 1, updatedAt: 0, items: [], categories: [] };
   }
   function loadSettings() {
     try { return JSON.parse(safeGet(SETTINGS_KEY) || '{}') || {}; } catch (e) { return {}; }
@@ -84,6 +87,32 @@
     data.updatedAt = Date.now();
     if (!safeSet(STORE_KEY, JSON.stringify(data))) toast('브라우저 저장소에 저장하지 못했어요.');
     scheduleSync();
+  }
+
+  // ── 카테고리 ─────────────────────────────────────────
+  var SWATCHES = ['#e5484d', '#f76b15', '#f5a524', '#30a46c', '#12a594', '#0090ff',
+    '#2f6fed', '#7c5cff', '#d6409f', '#8d6e63', '#607d8b', '#1d2230'];
+
+  function catById(id) {
+    if (!id) return null;
+    for (var i = 0; i < data.categories.length; i++) if (data.categories[i].id === id) return data.categories[i];
+    return null;
+  }
+  /** 일정 색상 (카테고리 색 → 없으면 null = 종류 기본색) */
+  function colorOf(it) { var c = catById(it.categoryId); return c ? c.color : null; }
+  function hexAlpha(hex, a) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h.replace(/./g, '$&$&');
+    var n = parseInt(h, 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  /** 요소에 카테고리 색 적용 (kind: 'chip' | 'border' | 'bg') */
+  function paint(node, it, kind) {
+    var c = colorOf(it);
+    if (!c) return;
+    node.style.setProperty('--cat', c);
+    node.style.setProperty('--cat-soft', hexAlpha(c, .16));
+    node.classList.add('has-cat');
   }
 
   // ── 상태 ──────────────────────────────────────────────
@@ -141,7 +170,9 @@
       list.slice(0, MAX).forEach(function (it) {
         var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''),
           (it.time ? it.time + ' ' : '') + it.title);
-        chip.title = it.title;
+        var cat = catById(it.categoryId);
+        chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title;
+        paint(chip, it);
         cell.appendChild(chip);
       });
       if (list.length > MAX) cell.appendChild(el('div', 'more', '+' + (list.length - MAX) + '개 더'));
@@ -149,6 +180,7 @@
       grid.appendChild(cell);
     }
     renderLists();
+    renderLegend();
   }
 
   // ── 사이드 패널 ───────────────────────────────────────
@@ -166,6 +198,7 @@
 
     list.forEach(function (it) {
       var li = el('li', 'item ' + it.type + (it.done ? ' done' : ''));
+      paint(li, it);
       var cb = document.createElement('input');
       cb.type = 'checkbox';
       cb.checked = !!it.done;
@@ -177,6 +210,13 @@
       body.appendChild(el('div', 'item-title', it.title));
       var meta = el('div', 'item-meta');
       meta.appendChild(el('span', null, it.type === 'appt' ? '약속' : '할 일'));
+      var icat = catById(it.categoryId);
+      if (icat) {
+        var tag = el('span', 'cat-tag', icat.name);
+        tag.style.setProperty('--cat', icat.color);
+        tag.style.setProperty('--cat-soft', hexAlpha(icat.color, .16));
+        meta.appendChild(tag);
+      }
       if (it.time) meta.appendChild(el('span', null, fmtTime(it.time)));
       var ra = remindAtOf(it);
       if (ra) meta.appendChild(el('span', null, '💬 ' + fmtRemind(ra) + ' 알림'));
@@ -210,7 +250,10 @@
       var li = el('li');
       var dd = parse(it.date);
       li.appendChild(el('span', 'd', (dd.getMonth() + 1) + '/' + dd.getDate() + '(' + WEEK[dd.getDay()] + ')' + (it.time ? ' ' + it.time : '')));
-      li.appendChild(el('span', it.done ? 'done' : null, (it.type === 'appt' ? '📌 ' : '✅ ') + it.title));
+      var dot = el('i', 'cat-dot sm ' + it.type);
+      paint(dot, it);
+      li.appendChild(dot);
+      li.appendChild(el('span', it.done ? 'done' : null, it.title));
       li.addEventListener('click', function () { select(it.date, true); });
       ul.appendChild(li);
     });
@@ -260,7 +303,16 @@
         cb.setAttribute('aria-label', it.title + ' 완료');
         cb.addEventListener('change', function () { toggleDone(it.id); });
         li.insertBefore(cb, li.firstChild);
-        body.appendChild(el('span', 'mbar ' + it.type));
+        var bar = el('span', 'mbar ' + it.type);
+        paint(bar, it);
+        body.appendChild(bar);
+        var lcat = catById(it.categoryId);
+        if (lcat) {
+          var ltag = el('span', 'cat-tag', lcat.name);
+          ltag.style.setProperty('--cat', lcat.color);
+          ltag.style.setProperty('--cat-soft', hexAlpha(lcat.color, .16));
+          body.appendChild(ltag);
+        }
         if (it.time) body.appendChild(el('span', 'mtime', it.time));
         var t = el('span', 'mtitle', it.title);
         t.title = it.title;
@@ -288,7 +340,7 @@
     renderMonthList(next.getFullYear(), next.getMonth(), $('listTitleNext'), $('listNext'));
   }
 
-  function render() { renderCalendar(); renderPanel(); }
+  function render() { fillCategorySelect($('catSelect').value); renderCalendar(); renderPanel(); }
 
   function select(ds, moveView) {
     selected = ds;
@@ -318,6 +370,137 @@
   ['remind', 'date', 'remindDate', 'remindTime'].forEach(function (name) {
     $('addForm').elements[name].addEventListener('input', updateRemindUI);
     $('addForm').elements[name].addEventListener('change', updateRemindUI);
+  });
+
+  // ── 카테고리 UI ──────────────────────────────────────
+  function fillCategorySelect(selectedId) {
+    var sel = $('catSelect');
+    sel.textContent = '';
+    var none = el('option', null, '카테고리 없음'); none.value = ''; sel.appendChild(none);
+    data.categories.forEach(function (c) {
+      var o = el('option', null, c.name); o.value = c.id; sel.appendChild(o);
+    });
+    var add = el('option', null, '＋ 새 카테고리 만들기…'); add.value = '__new'; sel.appendChild(add);
+    sel.value = selectedId || '';
+    updateCatDot();
+  }
+  function updateCatDot() {
+    var c = catById($('catSelect').value);
+    var dot = $('catDot');
+    dot.style.background = c ? c.color : 'transparent';
+    dot.classList.toggle('empty', !c);
+  }
+  var catReturnSelect = false;
+  $('catSelect').addEventListener('change', function () {
+    if (this.value === '__new') {
+      this.value = '';
+      catReturnSelect = true;
+      openCategories(true);
+    }
+    updateCatDot();
+  });
+  $('catManageBtn').addEventListener('click', function () { catReturnSelect = false; openCategories(false); });
+
+  function renderLegend() {
+    var lg = $('legend');
+    lg.textContent = '';
+    function item(color, cls, name) {
+      var s = el('span');
+      var d = el('i', 'dot' + (cls ? ' ' + cls : ''));
+      if (color) d.style.background = color;
+      s.appendChild(d); s.appendChild(document.createTextNode(name));
+      lg.appendChild(s);
+    }
+    data.categories.forEach(function (c) { item(c.color, null, c.name); });
+    if (!data.categories.length) { item(null, 'appt', '약속'); item(null, 'todo', '할 일'); }
+    item(null, 'holiday', '공휴일');
+    var b = el('button', 'btn ghost small', data.categories.length ? '카테고리 관리' : '＋ 카테고리 만들기');
+    b.type = 'button';
+    b.addEventListener('click', function () { catReturnSelect = false; openCategories(false); });
+    lg.appendChild(b);
+  }
+
+  function renderCatList() {
+    var ul = $('catList');
+    ul.textContent = '';
+    if (!data.categories.length) { ul.appendChild(el('li', 'mempty', '아직 카테고리가 없어요. 아래에서 만들어 보세요.')); return; }
+    data.categories.forEach(function (c) {
+      var li = el('li', 'cat-row');
+      var color = document.createElement('input');
+      color.type = 'color'; color.value = c.color; color.setAttribute('aria-label', c.name + ' 색상');
+      color.addEventListener('input', function () { c.color = color.value; render(); fillCategorySelect($('catSelect').value); });
+      color.addEventListener('change', function () { persist(); });
+      var name = document.createElement('input');
+      name.type = 'text'; name.value = c.name; name.maxLength = 20; name.setAttribute('aria-label', '카테고리 이름');
+      name.addEventListener('change', function () {
+        var v = name.value.trim();
+        if (!v) { name.value = c.name; return; }
+        c.name = v; persist(); render(); fillCategorySelect($('catSelect').value);
+      });
+      var count = data.items.filter(function (it) { return it.categoryId === c.id; }).length;
+      var cnt = el('span', 'cat-count', count + '개');
+      var del = el('button', 'btn ghost small danger', '삭제'); del.type = 'button';
+      del.addEventListener('click', function () {
+        if (!confirm('"' + c.name + '" 카테고리를 삭제할까요?' + (count ? '\n이 카테고리의 일정 ' + count + '개는 "카테고리 없음"이 돼요.' : ''))) return;
+        data.categories = data.categories.filter(function (x) { return x.id !== c.id; });
+        data.items.forEach(function (it) { if (it.categoryId === c.id) { it.categoryId = ''; it.updatedAt = Date.now(); } });
+        persist(); render(); renderCatList(); fillCategorySelect($('catSelect').value);
+      });
+      li.appendChild(color); li.appendChild(name); li.appendChild(cnt); li.appendChild(del);
+      ul.appendChild(li);
+    });
+  }
+
+  function nextSwatch() {
+    var used = data.categories.map(function (c) { return c.color.toLowerCase(); });
+    for (var i = 0; i < SWATCHES.length; i++) if (used.indexOf(SWATCHES[i]) < 0) return SWATCHES[i];
+    return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+  }
+
+  function renderSwatches() {
+    var box = $('swatches');
+    box.textContent = '';
+    SWATCHES.forEach(function (hex) {
+      var b = el('button', 'swatch'); b.type = 'button';
+      b.style.background = hex; b.setAttribute('aria-label', hex);
+      if ($('newCatColor').value.toLowerCase() === hex) b.classList.add('on');
+      b.addEventListener('click', function () { $('newCatColor').value = hex; renderSwatches(); });
+      box.appendChild(b);
+    });
+  }
+  $('newCatColor').addEventListener('input', renderSwatches);
+
+  function openCategories(focusNew) {
+    renderCatList();
+    $('newCatColor').value = nextSwatch();
+    $('newCatName').value = '';
+    renderSwatches();
+    $('catDialog').showModal();
+    if (focusNew) $('newCatName').focus();
+  }
+
+  function addCategory() {
+    var name = $('newCatName').value.trim();
+    if (!name) { toast('카테고리 이름을 입력해 주세요.'); $('newCatName').focus(); return; }
+    var c = { id: 'c' + uid(), name: name, color: $('newCatColor').value };
+    data.categories.push(c);
+    persist(); render(); renderCatList();
+    $('newCatName').value = '';
+    $('newCatColor').value = nextSwatch();
+    renderSwatches();
+    if (catReturnSelect) {
+      fillCategorySelect(c.id);
+      catReturnSelect = false;
+      $('catDialog').close();
+      toast('"' + c.name + '" 카테고리를 만들었어요.');
+    } else {
+      fillCategorySelect($('catSelect').value);
+      $('newCatName').focus();
+    }
+  }
+  $('addCatBtn').addEventListener('click', addCategory);
+  $('newCatName').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); addCategory(); }
   });
 
   // ── CRUD ─────────────────────────────────────────────
@@ -355,6 +538,7 @@
     f.remindTime.value = ra ? ra.slice(11, 16) : DEFAULT_REMIND_TIME;
     f.remindDate.value = ra ? ra.slice(0, 10) : '';
     f.memo.value = it.memo || '';
+    fillCategorySelect(catById(it.categoryId) ? it.categoryId : '');
     updateRemindUI();
     $('formTitle').textContent = '일정 수정';
     $('submitBtn').textContent = '저장';
@@ -365,7 +549,9 @@
   function resetForm() {
     editingId = null;
     var form = $('addForm');
+    var keepCat = form.elements.category.value;
     form.reset();
+    fillCategorySelect(catById(keepCat) ? keepCat : '');
     form.elements.date.value = selected;
     updateRemindUI();
     $('formTitle').textContent = '일정 추가';
@@ -388,6 +574,7 @@
       time: f.time.value || '',
       remind: remindAt ? remind : -1,
       remindAt: remindAt,
+      categoryId: catById(f.category.value) ? f.category.value : '',
       memo: f.memo.value.trim(),
       updatedAt: Date.now()
     };
@@ -491,7 +678,7 @@
     if (!syncEnabled()) return Promise.resolve();
     setSyncStatus('동기화 중…');
     return ghGet().then(function (file) {
-      var payload = { version: 1, updatedAt: data.updatedAt, items: data.items };
+      var payload = { version: 1, updatedAt: data.updatedAt, categories: data.categories, items: data.items };
       return ghRequest('PUT', {
         message: 'chore: 일정 업데이트',
         content: b64encode(JSON.stringify(payload, null, 2) + '\n'),
@@ -527,7 +714,8 @@
         setSyncStatus('☁︎ 연결됨');
         return;
       }
-      data = { version: 1, updatedAt: remote.updatedAt || Date.now(), items: remote.items };
+      data = { version: 1, updatedAt: remote.updatedAt || Date.now(), items: remote.items,
+        categories: Array.isArray(remote.categories) ? remote.categories : [] };
       safeSet(STORE_KEY, JSON.stringify(data));
       render();
       setSyncStatus('☁︎ 동기화됨');
@@ -545,7 +733,11 @@
     remote.items.forEach(function (it) {
       if (!map[it.id] || (it.updatedAt || 0) > (map[it.id].updatedAt || 0)) map[it.id] = it;
     });
-    return { version: 1, updatedAt: Date.now(), items: Object.keys(map).map(function (k) { return map[k]; }) };
+    var cats = {};
+    (local.categories || []).forEach(function (c) { cats[c.id] = c; });
+    (remote.categories || []).forEach(function (c) { if (!cats[c.id]) cats[c.id] = c; });
+    return { version: 1, updatedAt: Date.now(), items: Object.keys(map).map(function (k) { return map[k]; }),
+      categories: Object.keys(cats).map(function (k) { return cats[k]; }) };
   }
 
   var syncTimer;
@@ -594,7 +786,7 @@
   });
 
   $('exportBtn').addEventListener('click', function () {
-    var blob = new Blob([JSON.stringify({ version: 1, updatedAt: data.updatedAt, items: data.items }, null, 2)], { type: 'application/json' });
+    var blob = new Blob([JSON.stringify({ version: 1, updatedAt: data.updatedAt, categories: data.categories, items: data.items }, null, 2)], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'schedule.json';
@@ -615,6 +807,7 @@
   });
 
   // ── 시작 ─────────────────────────────────────────────
+  fillCategorySelect('');
   render();
   if (syncEnabled()) { setSyncStatus('☁︎ 연결됨'); pullFromGitHub(true); }
 })();
