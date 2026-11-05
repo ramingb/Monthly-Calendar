@@ -266,7 +266,6 @@
       var body = el('div', 'item-body');
       body.appendChild(el('div', 'item-title', it.title));
       var meta = el('div', 'item-meta');
-      meta.appendChild(el('span', null, it.type === 'appt' ? '약속' : '할 일'));
       var icat = catById(it.categoryId);
       if (icat) {
         var tag = el('span', 'cat-tag', icat.name);
@@ -537,7 +536,6 @@
     }
     var act = activeCats();
     act.forEach(function (c) { item(c.color, null, c.name); });
-    if (!act.length) { item(null, 'appt', '약속'); item(null, 'todo', '할 일'); }
     item(null, 'holiday', '공휴일');
     var b = el('button', 'btn ghost small', act.length ? '카테고리 관리' : '＋ 카테고리 만들기');
     b.type = 'button';
@@ -655,7 +653,7 @@
     if (!it) return;
     editingId = id;
     var f = $('addForm').elements;
-    f.type.value = it.type;
+    f.type.value = it.type || 'appt'; // 예전 일정의 종류는 그대로 보존
     f.title.value = it.title;
     f.date.value = it.date;
     f.endDate.value = isMulti(it) ? it.endDate : '';
