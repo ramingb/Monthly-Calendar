@@ -98,7 +98,9 @@
     for (var i = 0; i < data.categories.length; i++) if (data.categories[i].id === id) return data.categories[i];
     return null;
   }
-  /** 일정 색상 (카테고리 색 → 없으면 null = 종류 기본색) */
+  /** 선택 가능한(삭제되지 않은) 카테고리 */
+  function activeCats() { return data.categories.filter(function (c) { return !c.deleted; }); }
+  /** 일정 색상 (카테고리 색 → 없으면 null = 종류 기본색) — 삭제된 카테고리도 기존 일정엔 계속 표시 */
   function colorOf(it) { var c = catById(it.categoryId); return c ? c.color : null; }
   function hexAlpha(hex, a) {
     var h = hex.replace('#', '');
@@ -340,7 +342,7 @@
     renderMonthList(next.getFullYear(), next.getMonth(), $('listTitleNext'), $('listNext'));
   }
 
-  function render() { fillCategorySelect($('catSelect').value); renderCalendar(); renderPanel(); }
+  function render() { fillCategorySelect($('catValue').value); renderCalendar(); renderPanel(); }
 
   function select(ds, moveView) {
     selected = ds;
@@ -374,31 +376,39 @@
 
   // ── 카테고리 UI ──────────────────────────────────────
   function fillCategorySelect(selectedId) {
-    var sel = $('catSelect');
-    sel.textContent = '';
-    var none = el('option', null, '카테고리 없음'); none.value = ''; sel.appendChild(none);
-    data.categories.forEach(function (c) {
-      var o = el('option', null, c.name); o.value = c.id; sel.appendChild(o);
-    });
-    var add = el('option', null, '＋ 새 카테고리 만들기…'); add.value = '__new'; sel.appendChild(add);
-    sel.value = selectedId || '';
-    updateCatDot();
-  }
-  function updateCatDot() {
-    var c = catById($('catSelect').value);
-    var dot = $('catDot');
-    dot.style.background = c ? c.color : 'transparent';
-    dot.classList.toggle('empty', !c);
+    var box = $('catPicker');
+    var cur = catById(selectedId) ? selectedId : '';
+    // 삭제된 카테고리는 새로 고를 수 없지만, 그 카테고리 일정을 수정 중이면 그대로 보여줌
+    if (cur && catById(cur).deleted && !(editingId && (findItem(editingId) || {}).categoryId === cur)) cur = '';
+    $('catValue').value = cur;
+    box.textContent = '';
+
+    function chip(id, name, color, extraCls) {
+      var b = el('button', 'cat-chip' + (extraCls ? ' ' + extraCls : ''));
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(id === cur));
+      if (id === cur) b.classList.add('on');
+      if (color) {
+        b.style.setProperty('--cat', color);
+        b.style.setProperty('--cat-soft', hexAlpha(color, .16));
+        b.appendChild(el('i', 'cat-dot sm has-cat'));
+      }
+      b.appendChild(document.createTextNode(name));
+      b.addEventListener('click', function () { fillCategorySelect(id); });
+      box.appendChild(b);
+    }
+    chip('', '없음', null, 'none');
+    activeCats().forEach(function (c) { chip(c.id, c.name, c.color); });
+    var curCat = catById(cur);
+    if (curCat && curCat.deleted) chip(curCat.id, curCat.name + ' (삭제됨)', curCat.color, 'deleted');
+
+    var add = el('button', 'cat-chip add', '＋ 새 카테고리');
+    add.type = 'button';
+    add.addEventListener('click', function () { catReturnSelect = true; openCategories(true); });
+    box.appendChild(add);
   }
   var catReturnSelect = false;
-  $('catSelect').addEventListener('change', function () {
-    if (this.value === '__new') {
-      this.value = '';
-      catReturnSelect = true;
-      openCategories(true);
-    }
-    updateCatDot();
-  });
   $('catManageBtn').addEventListener('click', function () { catReturnSelect = false; openCategories(false); });
 
   function renderLegend() {
@@ -411,10 +421,11 @@
       s.appendChild(d); s.appendChild(document.createTextNode(name));
       lg.appendChild(s);
     }
-    data.categories.forEach(function (c) { item(c.color, null, c.name); });
-    if (!data.categories.length) { item(null, 'appt', '약속'); item(null, 'todo', '할 일'); }
+    var act = activeCats();
+    act.forEach(function (c) { item(c.color, null, c.name); });
+    if (!act.length) { item(null, 'appt', '약속'); item(null, 'todo', '할 일'); }
     item(null, 'holiday', '공휴일');
-    var b = el('button', 'btn ghost small', data.categories.length ? '카테고리 관리' : '＋ 카테고리 만들기');
+    var b = el('button', 'btn ghost small', act.length ? '카테고리 관리' : '＋ 카테고리 만들기');
     b.type = 'button';
     b.addEventListener('click', function () { catReturnSelect = false; openCategories(false); });
     lg.appendChild(b);
@@ -423,28 +434,30 @@
   function renderCatList() {
     var ul = $('catList');
     ul.textContent = '';
-    if (!data.categories.length) { ul.appendChild(el('li', 'mempty', '아직 카테고리가 없어요. 아래에서 만들어 보세요.')); return; }
-    data.categories.forEach(function (c) {
+    var act = activeCats();
+    if (!act.length) { ul.appendChild(el('li', 'mempty', '아직 카테고리가 없어요. 아래에서 만들어 보세요.')); return; }
+    act.forEach(function (c) {
       var li = el('li', 'cat-row');
       var color = document.createElement('input');
       color.type = 'color'; color.value = c.color; color.setAttribute('aria-label', c.name + ' 색상');
-      color.addEventListener('input', function () { c.color = color.value; render(); fillCategorySelect($('catSelect').value); });
+      color.addEventListener('input', function () { c.color = color.value; render(); fillCategorySelect($('catValue').value); });
       color.addEventListener('change', function () { persist(); });
       var name = document.createElement('input');
       name.type = 'text'; name.value = c.name; name.maxLength = 20; name.setAttribute('aria-label', '카테고리 이름');
       name.addEventListener('change', function () {
         var v = name.value.trim();
         if (!v) { name.value = c.name; return; }
-        c.name = v; persist(); render(); fillCategorySelect($('catSelect').value);
+        c.name = v; persist(); render(); fillCategorySelect($('catValue').value);
       });
       var count = data.items.filter(function (it) { return it.categoryId === c.id; }).length;
       var cnt = el('span', 'cat-count', count + '개');
       var del = el('button', 'btn ghost small danger', '삭제'); del.type = 'button';
       del.addEventListener('click', function () {
-        if (!confirm('"' + c.name + '" 카테고리를 삭제할까요?' + (count ? '\n이 카테고리의 일정 ' + count + '개는 "카테고리 없음"이 돼요.' : ''))) return;
-        data.categories = data.categories.filter(function (x) { return x.id !== c.id; });
-        data.items.forEach(function (it) { if (it.categoryId === c.id) { it.categoryId = ''; it.updatedAt = Date.now(); } });
-        persist(); render(); renderCatList(); fillCategorySelect($('catSelect').value);
+        if (!confirm('"' + c.name + '" 카테고리를 삭제할까요?\n일정 추가 목록에서는 사라지고, ' +
+          (count ? '이미 등록된 일정 ' + count + '개는 달력에 카테고리 그대로 남아요.' : '등록된 일정은 없어요.'))) return;
+        if (count) { c.deleted = true; c.deletedAt = Date.now(); }  // 기존 일정 표시용으로 보관
+        else data.categories = data.categories.filter(function (x) { return x.id !== c.id; });
+        persist(); render(); renderCatList(); fillCategorySelect($('catValue').value);
       });
       li.appendChild(color); li.appendChild(name); li.appendChild(cnt); li.appendChild(del);
       ul.appendChild(li);
@@ -452,7 +465,7 @@
   }
 
   function nextSwatch() {
-    var used = data.categories.map(function (c) { return c.color.toLowerCase(); });
+    var used = activeCats().map(function (c) { return c.color.toLowerCase(); });
     for (var i = 0; i < SWATCHES.length; i++) if (used.indexOf(SWATCHES[i]) < 0) return SWATCHES[i];
     return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
   }
@@ -494,7 +507,7 @@
       $('catDialog').close();
       toast('"' + c.name + '" 카테고리를 만들었어요.');
     } else {
-      fillCategorySelect($('catSelect').value);
+      fillCategorySelect($('catValue').value);
       $('newCatName').focus();
     }
   }
@@ -551,7 +564,8 @@
     var form = $('addForm');
     var keepCat = form.elements.category.value;
     form.reset();
-    fillCategorySelect(catById(keepCat) ? keepCat : '');
+    var kc = catById(keepCat);
+    fillCategorySelect(kc && !kc.deleted ? keepCat : '');
     form.elements.date.value = selected;
     updateRemindUI();
     $('formTitle').textContent = '일정 추가';
@@ -735,7 +749,7 @@
     });
     var cats = {};
     (local.categories || []).forEach(function (c) { cats[c.id] = c; });
-    (remote.categories || []).forEach(function (c) { if (!cats[c.id]) cats[c.id] = c; });
+    (remote.categories || []).forEach(function (c) { if (!cats[c.id] || (c.deleted && !cats[c.id].deleted)) cats[c.id] = c; });
     return { version: 1, updatedAt: Date.now(), items: Object.keys(map).map(function (k) { return map[k]; }),
       categories: Object.keys(cats).map(function (k) { return cats[k]; }) };
   }

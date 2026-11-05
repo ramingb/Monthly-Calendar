@@ -60,13 +60,11 @@
             <label><input type="radio" name="type" value="todo"><span>할 일</span></label>
           </div>
           <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
-          <label class="field">카테고리
-            <span class="cat-select">
-              <i class="cat-dot" id="catDot"></i>
-              <select name="category" id="catSelect"></select>
-              <button type="button" class="btn ghost small" id="catManageBtn">관리</button>
-            </span>
-          </label>
+          <div class="field">
+            <span class="field-label">카테고리 <button type="button" class="link-btn" id="catManageBtn">관리</button></span>
+            <div class="cat-picker" id="catPicker" role="radiogroup" aria-label="카테고리"></div>
+            <input type="hidden" name="category" id="catValue" value="">
+          </div>
           <div class="row">
             <label class="field">날짜<input type="date" name="date" required></label>
             <label class="field">시간<input type="time" name="time"></label>
@@ -143,7 +141,7 @@
   <dialog id="catDialog">
     <form method="dialog" class="settings-body" id="catForm">
       <h2>카테고리 관리</h2>
-      <p class="hint">카테고리와 색상은 원하는 만큼 만들 수 있어요. 색 동그라미를 누르면 어떤 색이든 고를 수 있어요.</p>
+      <p class="hint">카테고리와 색상은 원하는 만큼 만들 수 있어요. 색 동그라미를 누르면 어떤 색이든 고를 수 있어요. 카테고리를 삭제해도 이미 달력에 등록된 일정의 카테고리는 그대로 남아요.</p>
       <ul class="cat-list" id="catList"></ul>
       <section class="cat-new">
         <h3>새 카테고리</h3>
