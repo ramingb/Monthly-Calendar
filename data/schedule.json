@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793886992005,
+  "updatedAt": 1793887042602,
   "categories": [
     {
       "id": "cmw35ck3xw730at",
@@ -16,6 +16,11 @@
       "id": "cmw37z8vad8g4us",
       "name": "약속",
       "color": "#30a46c"
+    },
+    {
+      "id": "cmw3m10rtgl3ls8",
+      "name": "학교",
+      "color": "#09f400"
     }
   ],
   "items": [
