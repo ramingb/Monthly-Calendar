@@ -1,53 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793865425292,
-  "categories": [
-    {
-      "id": "cmw35ck3xw730at",
-      "name": "회사",
-      "color": "#8d6e63"
-    },
-    {
-      "id": "cmw35ecrmorwx2l",
-      "name": "라미",
-      "color": "#7c5cff"
-    },
-    {
-      "id": "cmw37z8vad8g4us",
-      "name": "약속",
-      "color": "#30a46c"
-    }
-  ],
-  "items": [
-    {
-      "type": "todo",
-      "title": "퇴근 준비",
-      "date": "2026-11-05",
-      "time": "17:00",
-      "remind": "custom",
-      "remindAt": "2026-11-05T16:50",
-      "categoryId": "cmw35ck3xw730at",
-      "memo": "정리하기",
-      "updatedAt": 1793865425290,
-      "id": "mw37wazwwu4b01",
-      "done": false,
-      "createdAt": 1793863307948,
-      "endDate": ""
-    },
-    {
-      "type": "appt",
-      "title": "이거뭐지 - 고성여행",
-      "date": "2026-12-05",
-      "time": "",
-      "remind": -1,
-      "remindAt": "",
-      "categoryId": "cmw37z8vad8g4us",
-      "memo": "",
-      "updatedAt": 1793864783914,
-      "id": "mw382mzg5hxy8r",
-      "done": false,
-      "createdAt": 1793863603420,
-      "endDate": "2026-12-06"
-    }
-  ]
+  "updatedAt": 1793865778738,
+  "categories": [],
+  "items": []
 }
