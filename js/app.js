@@ -414,15 +414,19 @@
     var name = span.dataset.for;
     var hidden = $('addForm').elements[name];
     var optional = span.dataset.optional === '1';
-    var hSel = document.createElement('select');
-    var mSel = document.createElement('select');
-    hSel.setAttribute('aria-label', name === 'time' ? '시' : '알림 시');
-    mSel.setAttribute('aria-label', name === 'time' ? '분' : '알림 분');
-    if (optional) { var o = el('option', null, '시간 없음'); o.value = ''; hSel.appendChild(o); }
-    for (var h = 0; h < 24; h++) {
-      var oh = el('option', null, (h < 12 ? '오전 ' : '오후 ') + (h % 12 === 0 ? 12 : h % 12) + '시');
-      oh.value = pad(h); hSel.appendChild(oh);
-    }
+    var label = name === 'time' ? '' : '알림 ';
+    var apSel = document.createElement('select'); // 시간 없음 / 오전 / 오후
+    var hSel = document.createElement('select');  // 1~12시
+    var mSel = document.createElement('select');  // 10분 단위
+    apSel.setAttribute('aria-label', label + '오전/오후');
+    hSel.setAttribute('aria-label', label + '시');
+    mSel.setAttribute('aria-label', label + '분');
+    apSel.className = 'tp-ap';
+    if (optional) { var o = el('option', null, '시간 없음'); o.value = ''; apSel.appendChild(o); }
+    [['am', '오전'], ['pm', '오후']].forEach(function (a) { var oa = el('option', null, a[1]); oa.value = a[0]; apSel.appendChild(oa); });
+    [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].forEach(function (h) {
+      var oh = el('option', null, h + '시'); oh.value = String(h); hSel.appendChild(oh);
+    });
     function fillMinutes(extra) {
       mSel.textContent = '';
       var mins = ['00', '10', '20', '30', '40', '50'];
@@ -430,20 +434,34 @@
       mins.forEach(function (mm) { var om = el('option', null, mm + '분'); om.value = mm; mSel.appendChild(om); });
     }
     fillMinutes();
+    function to24() {
+      var h = parseInt(hSel.value, 10) % 12;
+      return pad(apSel.value === 'pm' ? h + 12 : h);
+    }
+    function lock() {
+      var off = !apSel.value;
+      hSel.disabled = off; mSel.disabled = off;
+      span.classList.toggle('off', off);
+    }
     function sync() {
-      mSel.disabled = !hSel.value;
-      hidden.value = hSel.value ? hSel.value + ':' + mSel.value : '';
+      lock();
+      hidden.value = apSel.value ? to24() + ':' + mSel.value : '';
       updateRemindUI();
     }
-    hSel.addEventListener('change', sync);
-    mSel.addEventListener('change', sync);
-    span.appendChild(hSel); span.appendChild(mSel);
+    [apSel, hSel, mSel].forEach(function (sel) { sel.addEventListener('change', sync); span.appendChild(sel); });
     timePickers[name] = {
       set: function (v) {
+        if (!v && !optional) v = DEFAULT_REMIND_TIME;
         hidden.value = v || '';
-        if (!v) { hSel.value = optional ? '' : '08'; fillMinutes(); mSel.value = '00'; if (!optional) hidden.value = '08:00'; }
-        else { hSel.value = v.slice(0, 2); fillMinutes(v.slice(3, 5)); mSel.value = v.slice(3, 5); }
-        mSel.disabled = !hSel.value;
+        if (!v) {
+          apSel.value = ''; hSel.value = '9'; fillMinutes(); mSel.value = '00';
+        } else {
+          var h = parseInt(v.slice(0, 2), 10);
+          apSel.value = h < 12 ? 'am' : 'pm';
+          hSel.value = String(h % 12 === 0 ? 12 : h % 12);
+          fillMinutes(v.slice(3, 5)); mSel.value = v.slice(3, 5);
+        }
+        lock();
       }
     };
     timePickers[name].set(hidden.value);

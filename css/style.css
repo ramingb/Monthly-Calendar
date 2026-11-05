@@ -287,3 +287,4 @@ input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-rad
 .tp { display: flex; gap: 6px; }
 .tp select { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 8px 10px; color: var(--text); font-size: .92rem; }
 .tp select:disabled { opacity: .45; }
+.tp .tp-ap { flex: 1.25; }
