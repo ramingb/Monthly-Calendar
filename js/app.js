@@ -206,6 +206,7 @@
         cell.appendChild(head);
 
         var list = byDate[ds] || [];
+        if (list.some(function (x) { return x.memo && x.memo.trim(); })) head.appendChild(el('span', 'memo-flag', '📝')); // 휴대폰 화면용
         cell.setAttribute('aria-label', fmtDate(ds) + (hol.length ? ', ' + hol.join(', ') : '') + (list.length ? ', 일정 ' + list.length + '개' : ''));
 
         // 마지막으로 내용이 있는 줄까지만 그림 (빈 줄은 자리만 차지)
@@ -219,15 +220,18 @@
           hiddenCount--;
           var multi = isMulti(it);
           var showLabel = !multi || ds === it.date || col === 0;
-          var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''),
-            showLabel ? (it.time && ds === it.date ? it.time + ' ' : '') + it.title : '\u00a0');
+          var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''));
+          chip.appendChild(el('span', 'chip-text', showLabel ? (it.time && ds === it.date ? it.time + ' ' : '') + it.title : '\u00a0'));
+          var hasMemo = it.memo && it.memo.trim();
+          if (hasMemo && showLabel) chip.appendChild(el('span', 'chip-memo', '📝'));
           if (multi) {
             chip.classList.add('span');
             if (ds === it.date) chip.classList.add('span-start');
             if (ds === endOf(it)) chip.classList.add('span-end');
           }
           var cat = catById(it.categoryId);
-          chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title + (multi ? ' (' + rangeText(it) + ')' : '');
+          chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title + (multi ? ' (' + rangeText(it) + ')' : '') +
+            (hasMemo ? '\n📝 ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo) : '');
           paint(chip, it);
           cell.appendChild(chip);
         }
@@ -278,7 +282,22 @@
       var ra = remindAtOf(it);
       if (ra) meta.appendChild(el('span', null, '💬 ' + fmtRemind(ra) + ' 알림'));
       body.appendChild(meta);
-      if (it.memo) body.appendChild(el('div', 'item-memo', it.memo));
+      if (it.memo) {
+        var memo = el('div', 'item-memo', it.memo);
+        body.appendChild(memo);
+        // 긴 메모는 4줄까지만 보이고 '더보기'로 펼침
+        requestAnimationFrame(function () {
+          if (memo.scrollHeight > memo.clientHeight + 2) {
+            var more = el('button', 'memo-more', '더보기');
+            more.type = 'button';
+            more.addEventListener('click', function () {
+              var open = memo.classList.toggle('open');
+              more.textContent = open ? '접기' : '더보기';
+            });
+            body.appendChild(more);
+          }
+        });
+      }
       li.appendChild(body);
 
       var acts = el('div', 'item-actions');
@@ -377,6 +396,11 @@
         t.title = it.title + (isMulti(it) ? ' (' + rangeText(it) + ')' : '');
         body.appendChild(t);
         if (isMulti(it)) body.appendChild(el('span', 'span-tag', '~' + shortDate(endOf(it)) + ' · ' + spanDays(it) + '일'));
+        if (it.memo && it.memo.trim()) {
+          var mi = el('span', 'mbell', '📝');
+          mi.title = '메모: ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo);
+          body.appendChild(mi);
+        }
         if (remindAtOf(it) && !it.done) {
           var bell = el('span', 'mbell', '🔔');
           bell.title = fmtRemind(remindAtOf(it)) + ' 카톡 알림';
@@ -467,6 +491,14 @@
     timePickers[name].set(hidden.value);
   }
   function setTime(name, v) { timePickers[name].set(v); }
+
+  // ── 메모 입력칸: 내용에 맞춰 자동으로 늘어남 ─────────
+  function autoGrowMemo() {
+    var ta = $('addForm').elements.memo;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, 420) + 'px';
+  }
+  $('addForm').elements.memo.addEventListener('input', autoGrowMemo);
 
   // ── 여러 날 입력 ─────────────────────────────────────
   function updateSpanUI() {
@@ -683,6 +715,7 @@
     setTime('remindTime', ra ? ra.slice(11, 16) : DEFAULT_REMIND_TIME);
     f.remindDate.value = ra ? ra.slice(0, 10) : '';
     f.memo.value = it.memo || '';
+    autoGrowMemo();
     fillCategorySelect(catById(it.categoryId) ? it.categoryId : '');
     updateRemindUI();
     $('formTitle').textContent = '일정 수정';
@@ -701,6 +734,7 @@
     form.elements.date.value = selected;
     setTime('time', '');
     setTime('remindTime', DEFAULT_REMIND_TIME);
+    autoGrowMemo();
     updateSpanUI();
     updateRemindUI();
     $('formTitle').textContent = '일정 추가';
