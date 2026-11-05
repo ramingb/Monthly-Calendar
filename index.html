@@ -55,16 +55,24 @@
             <label class="field">날짜<input type="date" name="date" required></label>
             <label class="field">시간<input type="time" name="time"></label>
           </div>
-          <label class="field">카톡 알림
-            <select name="remind">
-              <option value="-1">알림 없음</option>
-              <option value="0">당일 아침</option>
-              <option value="1" selected>1일 전</option>
-              <option value="2">2일 전</option>
-              <option value="3">3일 전</option>
-              <option value="7">1주일 전</option>
-            </select>
-          </label>
+          <div class="remind-box">
+            <label class="field">카톡 알림
+                <select name="remind">
+                  <option value="-1">알림 없음</option>
+                  <option value="0">당일</option>
+                  <option value="1" selected>1일 전</option>
+                  <option value="2">2일 전</option>
+                  <option value="3">3일 전</option>
+                  <option value="7">1주일 전</option>
+                  <option value="custom">날짜 직접 지정</option>
+                </select>
+            </label>
+            <div class="row">
+              <label class="field" id="remindDateField" hidden>알림 날짜<input type="date" name="remindDate"></label>
+              <label class="field" id="remindTimeField">알림 시간<input type="time" name="remindTime" value="08:00"></label>
+            </div>
+            <p class="remind-preview" id="remindPreview"></p>
+          </div>
           <textarea name="memo" rows="2" placeholder="메모 (선택)" maxlength="300"></textarea>
           <div class="form-actions">
             <button type="button" class="btn ghost" id="cancelEdit" hidden>취소</button>
@@ -88,7 +96,7 @@
         <h3>카카오톡 알림 연동 (GitHub 동기화)</h3>
         <p class="hint">
           일정을 이 저장소의 <code>data/schedule.json</code>에 자동 저장하면,
-          GitHub Actions가 매일 아침 8시(한국시간)에 알림 대상 일정을 카카오톡 "나와의 채팅"으로 보내요.
+          GitHub Actions가 15분마다 확인해서 일정마다 정한 알림 시간에 카카오톡 "나와의 채팅"으로 보내요.
           설정 방법은 README를 참고하세요.
         </p>
         <label class="field">저장소 (owner/repo)<input name="repo" placeholder="ramingb/Monthly-Calendar"></label>

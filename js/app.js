@@ -5,7 +5,6 @@
   var SETTINGS_KEY = 'monthly-calendar:settings:v1';
   var DATA_PATH = 'data/schedule.json';
   var WEEK = ['일', '월', '화', '수', '목', '금', '토'];
-  var REMIND_LABEL = { '-1': '', '0': '당일 알림', '1': '1일 전 알림', '2': '2일 전 알림', '3': '3일 전 알림', '7': '1주 전 알림' };
   var H = window.KoreanHolidays;
 
   // ── 유틸 ──────────────────────────────────────────────
@@ -32,6 +31,35 @@
     var at = a.time || '99:99', bt = b.time || '99:99';
     if (at !== bt) return at < bt ? -1 : 1;
     return (a.createdAt || 0) - (b.createdAt || 0);
+  }
+
+  // ── 카톡 알림 시각 ────────────────────────────────────
+  var DEFAULT_REMIND_TIME = '08:00';
+
+  /** 일정의 알림 시각 'YYYY-MM-DDTHH:MM' (없으면 '') — 예전 데이터(remind 일수만 있음)도 지원 */
+  function remindAtOf(it) {
+    if (it.remindAt) return it.remindAt;
+    var n = parseInt(it.remind, 10);
+    if (isNaN(n) || n < 0) return '';
+    var d = parse(it.date); d.setDate(d.getDate() - n);
+    return ymd(d) + 'T' + (it.remindTime || DEFAULT_REMIND_TIME);
+  }
+
+  /** 폼 값으로 알림 시각 계산 */
+  function computeRemindAt(remind, date, remindDate, remindTime) {
+    var time = remindTime || DEFAULT_REMIND_TIME;
+    if (remind === 'custom') return remindDate ? remindDate + 'T' + time : '';
+    var n = parseInt(remind, 10);
+    if (isNaN(n) || n < 0 || !date) return '';
+    var d = parse(date); d.setDate(d.getDate() - n);
+    return ymd(d) + 'T' + time;
+  }
+
+  function nowLocal() { var d = new Date(); return ymd(d) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+  function fmtRemind(at) {
+    var d = parse(at.slice(0, 10));
+    return (d.getMonth() + 1) + '/' + d.getDate() + '(' + WEEK[d.getDay()] + ') ' + fmtTime(at.slice(11, 16));
   }
 
   // ── 저장소 (localStorage) ─────────────────────────────
@@ -149,8 +177,8 @@
       var meta = el('div', 'item-meta');
       meta.appendChild(el('span', null, it.type === 'appt' ? '약속' : '할 일'));
       if (it.time) meta.appendChild(el('span', null, fmtTime(it.time)));
-      var rl = REMIND_LABEL[String(it.remind)];
-      if (rl) meta.appendChild(el('span', null, '💬 ' + rl));
+      var ra = remindAtOf(it);
+      if (ra) meta.appendChild(el('span', null, '💬 ' + fmtRemind(ra) + ' 알림'));
       body.appendChild(meta);
       if (it.memo) body.appendChild(el('div', 'item-memo', it.memo));
       li.appendChild(body);
@@ -166,7 +194,7 @@
       ul.appendChild(li);
     });
 
-    if (!editingId) $('addForm').elements.date.value = selected;
+    if (!editingId) { $('addForm').elements.date.value = selected; updateRemindUI(); }
     renderUpcoming();
   }
 
@@ -194,6 +222,30 @@
     if (moveView) { var d = parse(ds); view = new Date(d.getFullYear(), d.getMonth(), 1); }
     render();
   }
+
+  // ── 알림 입력 UI ─────────────────────────────────────
+  function updateRemindUI() {
+    var f = $('addForm').elements;
+    var v = f.remind.value;
+    var off = v === '-1';
+    $('remindDateField').hidden = v !== 'custom';
+    $('remindTimeField').hidden = off;
+    if (v === 'custom' && !f.remindDate.value) f.remindDate.value = f.date.value || selected;
+    var at = off ? '' : computeRemindAt(v, f.date.value, f.remindDate.value, f.remindTime.value);
+    var p = $('remindPreview');
+    p.classList.remove('past');
+    if (!at) { p.textContent = ''; return; }
+    if (at <= nowLocal()) {
+      p.classList.add('past');
+      p.textContent = '⚠︎ ' + fmtRemind(at) + ' — 이미 지난 시각이에요';
+    } else {
+      p.textContent = '🔔 ' + fmtRemind(at) + '에 카톡으로 알려드려요';
+    }
+  }
+  ['remind', 'date', 'remindDate', 'remindTime'].forEach(function (name) {
+    $('addForm').elements[name].addEventListener('input', updateRemindUI);
+    $('addForm').elements[name].addEventListener('change', updateRemindUI);
+  });
 
   // ── CRUD ─────────────────────────────────────────────
   function findItem(id) { return data.items.filter(function (it) { return it.id === id; })[0]; }
@@ -224,8 +276,13 @@
     f.title.value = it.title;
     f.date.value = it.date;
     f.time.value = it.time || '';
-    f.remind.value = String(it.remind);
+    var ra = remindAtOf(it);
+    f.remind.value = ra ? String(it.remind) : '-1';
+    if (f.remind.selectedIndex < 0) f.remind.value = '-1';
+    f.remindTime.value = ra ? ra.slice(11, 16) : DEFAULT_REMIND_TIME;
+    f.remindDate.value = ra ? ra.slice(0, 10) : '';
     f.memo.value = it.memo || '';
+    updateRemindUI();
     $('formTitle').textContent = '일정 수정';
     $('submitBtn').textContent = '저장';
     $('cancelEdit').hidden = false;
@@ -237,6 +294,7 @@
     var form = $('addForm');
     form.reset();
     form.elements.date.value = selected;
+    updateRemindUI();
     $('formTitle').textContent = '일정 추가';
     $('submitBtn').textContent = '추가';
     $('cancelEdit').hidden = true;
@@ -247,12 +305,16 @@
     var f = e.target.elements;
     var title = f.title.value.trim();
     if (!title || !f.date.value) return;
+    var remind = f.remind.value === 'custom' ? 'custom' : parseInt(f.remind.value, 10);
+    var remindAt = computeRemindAt(f.remind.value, f.date.value, f.remindDate.value, f.remindTime.value);
+    if (remind === 'custom' && !remindAt) { toast('알림 날짜를 선택해 주세요.'); f.remindDate.focus(); return; }
     var values = {
       type: f.type.value,
       title: title,
       date: f.date.value,
       time: f.time.value || '',
-      remind: parseInt(f.remind.value, 10),
+      remind: remindAt ? remind : -1,
+      remindAt: remindAt,
       memo: f.memo.value.trim(),
       updatedAt: Date.now()
     };
@@ -269,6 +331,7 @@
       msg = '추가했어요.';
     }
     var targetDate = values.date;
+    if (remindAt && remindAt <= nowLocal()) msg += ' (알림 시각이 이미 지나서 카톡은 보내지 않아요)';
     resetForm();
     persist();
     select(targetDate, true);
