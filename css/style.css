@@ -303,3 +303,14 @@ input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-rad
 .tp select { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 8px 10px; color: var(--text); font-size: .92rem; }
 .tp select:disabled { opacity: .45; }
 .tp .tp-ap { flex: 1.25; }
+
+/* ── 메모 있음 표시 ── */
+.chip { display: flex; align-items: center; gap: 2px; }
+.chip-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip.done .chip-text { text-decoration: line-through; }
+.chip-memo { flex: none; font-size: .68rem; line-height: 1; }
+.memo-flag { display: none; }
+@media (max-width: 600px) {
+  .chip-memo { display: none; }
+  .memo-flag { display: inline; font-size: .58rem; margin-left: auto; line-height: 1; }
+}

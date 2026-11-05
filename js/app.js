@@ -206,6 +206,7 @@
         cell.appendChild(head);
 
         var list = byDate[ds] || [];
+        if (list.some(function (x) { return x.memo && x.memo.trim(); })) head.appendChild(el('span', 'memo-flag', '📝')); // 휴대폰 화면용
         cell.setAttribute('aria-label', fmtDate(ds) + (hol.length ? ', ' + hol.join(', ') : '') + (list.length ? ', 일정 ' + list.length + '개' : ''));
 
         // 마지막으로 내용이 있는 줄까지만 그림 (빈 줄은 자리만 차지)
@@ -219,15 +220,18 @@
           hiddenCount--;
           var multi = isMulti(it);
           var showLabel = !multi || ds === it.date || col === 0;
-          var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''),
-            showLabel ? (it.time && ds === it.date ? it.time + ' ' : '') + it.title : '\u00a0');
+          var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''));
+          chip.appendChild(el('span', 'chip-text', showLabel ? (it.time && ds === it.date ? it.time + ' ' : '') + it.title : '\u00a0'));
+          var hasMemo = it.memo && it.memo.trim();
+          if (hasMemo && showLabel) chip.appendChild(el('span', 'chip-memo', '📝'));
           if (multi) {
             chip.classList.add('span');
             if (ds === it.date) chip.classList.add('span-start');
             if (ds === endOf(it)) chip.classList.add('span-end');
           }
           var cat = catById(it.categoryId);
-          chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title + (multi ? ' (' + rangeText(it) + ')' : '');
+          chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title + (multi ? ' (' + rangeText(it) + ')' : '') +
+            (hasMemo ? '\n📝 ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo) : '');
           paint(chip, it);
           cell.appendChild(chip);
         }
@@ -392,6 +396,11 @@
         t.title = it.title + (isMulti(it) ? ' (' + rangeText(it) + ')' : '');
         body.appendChild(t);
         if (isMulti(it)) body.appendChild(el('span', 'span-tag', '~' + shortDate(endOf(it)) + ' · ' + spanDays(it) + '일'));
+        if (it.memo && it.memo.trim()) {
+          var mi = el('span', 'mbell', '📝');
+          mi.title = '메모: ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo);
+          body.appendChild(mi);
+        }
         if (remindAtOf(it) && !it.done) {
           var bell = el('span', 'mbell', '🔔');
           bell.title = fmtRemind(remindAtOf(it)) + ' 카톡 알림';
