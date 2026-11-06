@@ -34,6 +34,7 @@ jobs:
           KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
           CALENDAR_URL: ${{ vars.CALENDAR_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+          NEW_REFRESH_TOKEN_FILE: ${{ runner.temp }}/kakao_refresh_token
       - name: 전송 기록 저장 (중복 방지)
         run: |
           git diff --quiet -- data/sent.json && exit 0
@@ -47,3 +48,24 @@ jobs:
           done
           echo "::error::전송 기록을 저장하지 못했습니다. 다음 실행에서 같은 알림이 다시 갈 수 있습니다."
           exit 1
+      - name: 카카오 리프레시 토큰 자동 저장
+        # 카카오가 새 리프레시 토큰을 준 경우에만 동작 (만료 1개월 전부터)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_TOKEN }}
+          TOKEN_FILE: ${{ runner.temp }}/kakao_refresh_token
+        run: |
+          [ -s "$TOKEN_FILE" ] || exit 0
+          if [ -z "$GH_TOKEN" ]; then
+            rm -f "$TOKEN_FILE"
+            echo "::error::새 카카오 리프레시 토큰을 받았지만 SECRETS_TOKEN 시크릿이 없어 저장하지 못했습니다. README의 '토큰 자동 갱신'을 참고하세요."
+            exit 1
+          fi
+          if gh secret set KAKAO_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" < "$TOKEN_FILE"; then
+            rm -f "$TOKEN_FILE"
+            echo "✅ 카카오 리프레시 토큰을 새 값으로 자동 저장했습니다." >> "$GITHUB_STEP_SUMMARY"
+          else
+            rm -f "$TOKEN_FILE"
+            echo "::error::KAKAO_REFRESH_TOKEN 저장 실패 — SECRETS_TOKEN의 권한(Secrets: Read and write)과 만료일을 확인하세요. 다음 실행에서 다시 시도합니다."
+            exit 1
+          fi
