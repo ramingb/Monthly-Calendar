@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793887152609,
+  "updatedAt": 1793929279272,
   "categories": [
     {
       "id": "cmw35ck3xw730at",
@@ -53,6 +53,21 @@
       "id": "mw3m3dni14fm88",
       "done": false,
       "createdAt": 1793887152606
+    },
+    {
+      "type": "appt",
+      "title": "출석수업 사회복지상상력",
+      "date": "2026-11-08",
+      "endDate": "",
+      "time": "13:00",
+      "remind": -1,
+      "remindAt": "",
+      "categoryId": "cmw3m10rtgl3ls8",
+      "memo": "",
+      "updatedAt": 1793929279270,
+      "id": "mw4b6asmrc0t6u",
+      "done": false,
+      "createdAt": 1793929279270
     }
   ]
 }
