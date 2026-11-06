@@ -25,11 +25,11 @@
     <main class="layout">
       <div class="main-col">
       <section class="calendar" aria-label="달력">
+        <div class="legend" id="legend"></div>
         <div class="weekdays">
           <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
         </div>
         <div class="grid" id="grid"></div>
-        <div class="legend" id="legend"></div>
       </section>
 
         <section class="month-lists" aria-label="월별 일정 목록">
@@ -70,6 +70,17 @@
           <div class="field">시간
             <input type="hidden" name="time" value="">
             <span class="tp" data-for="time" data-optional="1"></span>
+          </div>
+          <div class="row">
+            <label class="field">반복
+              <select name="repeat">
+                <option value="">반복 안 함</option>
+                <option value="weekly">매주</option>
+                <option value="monthly">매월</option>
+                <option value="yearly">매년</option>
+              </select>
+            </label>
+            <label class="field" id="repeatUntilField" hidden><span class="field-label">반복 종료 <small class="span-hint">(선택)</small></span><input type="date" name="repeatUntil"></label>
           </div>
           <div class="remind-box">
             <label class="field">카톡 알림
@@ -162,9 +173,22 @@
     </form>
   </dialog>
 
+  <dialog id="repeatDelDialog">
+    <form method="dialog" class="settings-body">
+      <h2>반복 일정 삭제</h2>
+      <p class="hint" id="repeatDelText"></p>
+      <div class="form-actions wrap">
+        <button value="cancel" class="btn ghost">취소</button>
+        <button value="one" class="btn ghost">이 날짜만 삭제</button>
+        <button value="all" class="btn primary">모든 반복 삭제</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="js/holidays.js"></script>
+  <script src="js/recur.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

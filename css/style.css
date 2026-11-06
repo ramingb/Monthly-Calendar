@@ -119,7 +119,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chip.done { text-decoration: line-through; opacity: .5; }
 .more { font-size: .7rem; color: var(--muted); padding-left: 4px; }
 
-.legend { display: flex; gap: 14px; justify-content: flex-end; font-size: .78rem; color: var(--muted); padding: 8px 4px 2px; }
+.legend { display: flex; gap: 14px; justify-content: flex-end; font-size: .78rem; color: var(--muted); padding: 2px 4px 10px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 .dot.appt { background: var(--appt); } .dot.todo { background: var(--todo); } .dot.holiday { background: var(--sun); }
@@ -314,3 +314,6 @@ input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-rad
   .chip-memo { display: none; }
   .memo-flag { display: inline; font-size: .58rem; margin-left: auto; line-height: 1; }
 }
+
+/* ── 반복 일정 삭제 선택 ── */
+.form-actions.wrap { flex-wrap: wrap; }

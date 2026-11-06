@@ -38,6 +38,7 @@
 
   /** 일정의 알림 시각 'YYYY-MM-DDTHH:MM' (없으면 '') — 예전 데이터(remind 일수만 있음)도 지원 */
   function remindAtOf(it) {
+    if (it._base) return Recur.remindAtFor(remindAtOf(it._base), it._base.date, it._occ); // 반복 일정의 회차
     if (it.remindAt) return it.remindAt;
     var n = parseInt(it.remind, 10);
     if (isNaN(n) || n < 0) return '';
@@ -127,6 +128,29 @@
   function shortDate(s) { var d = parse(s); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + WEEK[d.getDay()] + ')'; }
   function rangeText(it) { return shortDate(it.date) + ' ~ ' + shortDate(endOf(it)) + ' · ' + spanDays(it) + '일'; }
 
+  // ── 반복 일정: 기간 안의 회차 펼치기 ──────────────────
+  function baseOf(it) { return it._base || it; }
+  function occKey(it) { return it.id + '@' + it.date; }
+  /** [from, to] 기간에 보이는 일정 목록 (반복 일정은 회차마다 하나씩) */
+  function expand(from, to) {
+    var out = [];
+    data.items.forEach(function (it) {
+      if (!Recur.isRepeating(it)) { if (overlaps(it, from, to)) out.push(it); return; }
+      var dur = spanDays(it) - 1;
+      Recur.occurrenceStarts(it, from, to).forEach(function (s) {
+        var o = {};
+        Object.keys(it).forEach(function (k) { o[k] = it[k]; });
+        o.date = s;
+        o.endDate = dur ? Recur.addDays(s, dur) : '';
+        o.done = !!(it.doneDates && it.doneDates[s]);
+        o._base = it;
+        o._occ = s;
+        out.push(o);
+      });
+    });
+    return out;
+  }
+
   // ── 상태 ──────────────────────────────────────────────
   var today = ymd(new Date());
   var view = new Date(); view.setDate(1);
@@ -134,9 +158,9 @@
   var editingId = null;
 
   // ── 달력 렌더링 ───────────────────────────────────────
-  function itemsByDate() {
+  function itemsByDate(from, to) {
     var map = {};
-    data.items.forEach(function (it) {
+    expand(from, to).forEach(function (it) {
       var d = parse(it.date), end = endOf(it), guard = 0;
       for (var ds = it.date; ds <= end && guard < 400; guard++) {
         (map[ds] = map[ds] || []).push(it);
@@ -155,7 +179,7 @@
     var start = new Date(y, m, 1 - first.getDay()); // 일요일 시작
     var lastDay = new Date(y, m + 1, 0).getDate();
     var weeks = Math.ceil((first.getDay() + lastDay) / 7);
-    var byDate = itemsByDate();
+    var byDate = itemsByDate(ymd(start), ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + weeks * 7 - 1)));
     var grid = $('grid');
     grid.textContent = '';
 
@@ -166,7 +190,7 @@
       for (var k = 0; k < 7; k++) days.push(ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7 + k)));
       var seen = {}, weekItems = [];
       days.forEach(function (ds) {
-        (byDate[ds] || []).forEach(function (it) { if (!seen[it.id]) { seen[it.id] = 1; weekItems.push(it); } });
+        (byDate[ds] || []).forEach(function (it) { if (!seen[occKey(it)]) { seen[occKey(it)] = 1; weekItems.push(it); } });
       });
       weekItems.sort(function (a, b) {
         var ma = isMulti(a), mb = isMulti(b);
@@ -223,6 +247,7 @@
           var chip = el('div', 'chip ' + it.type + (it.done ? ' done' : ''));
           chip.appendChild(el('span', 'chip-text', showLabel ? (it.time && ds === it.date ? it.time + ' ' : '') + it.title : '\u00a0'));
           var hasMemo = it.memo && it.memo.trim();
+          if (it._base && showLabel) chip.appendChild(el('span', 'chip-memo', '🔁'));
           if (hasMemo && showLabel) chip.appendChild(el('span', 'chip-memo', '📝'));
           if (multi) {
             chip.classList.add('span');
@@ -231,6 +256,7 @@
           }
           var cat = catById(it.categoryId);
           chip.title = (cat ? '[' + cat.name + '] ' : '') + it.title + (multi ? ' (' + rangeText(it) + ')' : '') +
+            (it._base ? '\n🔁 ' + Recur.describe(it._base) : '') +
             (hasMemo ? '\n📝 ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo) : '');
           paint(chip, it);
           cell.appendChild(chip);
@@ -252,7 +278,7 @@
     $('panelHoliday').textContent = hol.length ? '🎌 ' + hol.join(' · ') : (obs || '');
     $('panelHoliday').style.color = hol.length ? '' : 'var(--muted)';
 
-    var list = data.items.filter(function (it) { return overlaps(it, selected, selected); }).sort(sortItems);
+    var list = expand(selected, selected).sort(sortItems);
     var ul = $('itemList');
     ul.textContent = '';
     $('emptyMsg').hidden = list.length > 0;
@@ -264,7 +290,7 @@
       cb.type = 'checkbox';
       cb.checked = !!it.done;
       cb.setAttribute('aria-label', it.title + ' 완료');
-      cb.addEventListener('change', function () { toggleDone(it.id); });
+      cb.addEventListener('change', function () { toggleDone(it); });
       li.appendChild(cb);
 
       var body = el('div', 'item-body');
@@ -277,6 +303,7 @@
         tag.style.setProperty('--cat-soft', hexAlpha(icat.color, .16));
         meta.appendChild(tag);
       }
+      if (it._base) meta.appendChild(el('span', 'span-tag', '🔁 ' + Recur.describe(it._base)));
       if (isMulti(it)) meta.appendChild(el('span', 'span-tag', '📅 ' + rangeText(it)));
       if (it.time) meta.appendChild(el('span', null, fmtTime(it.time)));
       var ra = remindAtOf(it);
@@ -302,23 +329,23 @@
 
       var acts = el('div', 'item-actions');
       var eb = el('button', null, '수정'); eb.type = 'button';
-      eb.addEventListener('click', function () { startEdit(it.id); });
+      eb.addEventListener('click', function () { startEdit(baseOf(it).id); });
       var db = el('button', null, '삭제'); db.type = 'button';
-      db.addEventListener('click', function () { removeItem(it.id); });
+      db.addEventListener('click', function () { removeItem(it); });
       acts.appendChild(eb); acts.appendChild(db);
       li.appendChild(acts);
 
       ul.appendChild(li);
     });
 
-    if (!editingId) { $('addForm').elements.date.value = selected; updateSpanUI(); updateRemindUI(); }
+    if (!editingId) { $('addForm').elements.date.value = selected; updateSpanUI(); updateRepeatUI(); updateRemindUI(); }
     renderUpcoming();
   }
 
   function renderUpcoming() {
     var end = parse(today); end.setDate(end.getDate() + 7);
     var endS = ymd(end);
-    var list = data.items.filter(function (it) { return overlaps(it, today, ymd(new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1))); }).sort(sortItems);
+    var list = expand(today, ymd(new Date(end.getFullYear(), end.getMonth(), end.getDate() - 1))).sort(sortItems);
     var ul = $('upcomingList');
     ul.textContent = '';
     if (!list.length) { ul.appendChild(el('li', 'empty', '예정된 일정이 없어요.')); return; }
@@ -340,7 +367,7 @@
   function renderMonthList(year, month, titleEl, listEl) {
     var prefix = year + '-' + pad(month + 1) + '-';
     var mFrom = prefix + '01', mTo = prefix + pad(new Date(year, month + 1, 0).getDate());
-    var items = data.items.filter(function (it) { return overlaps(it, mFrom, mTo); }).sort(sortItems);
+    var items = expand(mFrom, mTo).sort(sortItems);
     var doneCount = items.filter(function (it) { return it.done; }).length;
 
     titleEl.textContent = '';
@@ -379,7 +406,7 @@
         cb.type = 'checkbox';
         cb.checked = !!it.done;
         cb.setAttribute('aria-label', it.title + ' 완료');
-        cb.addEventListener('change', function () { toggleDone(it.id); });
+        cb.addEventListener('change', function () { toggleDone(it); });
         li.insertBefore(cb, li.firstChild);
         var bar = el('span', 'mbar ' + it.type);
         paint(bar, it);
@@ -396,6 +423,7 @@
         t.title = it.title + (isMulti(it) ? ' (' + rangeText(it) + ')' : '');
         body.appendChild(t);
         if (isMulti(it)) body.appendChild(el('span', 'span-tag', '~' + shortDate(endOf(it)) + ' · ' + spanDays(it) + '일'));
+        if (it._base) { var rp = el('span', 'mbell', '🔁'); rp.title = Recur.describe(it._base); body.appendChild(rp); }
         if (it.memo && it.memo.trim()) {
           var mi = el('span', 'mbell', '📝');
           mi.title = '메모: ' + (it.memo.length > 120 ? it.memo.slice(0, 120) + '…' : it.memo);
@@ -513,6 +541,21 @@
   $('addForm').elements.endDate.addEventListener('change', updateSpanUI);
   $('addForm').elements.endDate.addEventListener('input', updateSpanUI);
 
+  // ── 반복 입력 UI ─────────────────────────────────────
+  function updateRepeatUI() {
+    var f = $('addForm').elements;
+    var probe = { date: f.date.value || selected };
+    ['weekly', 'monthly', 'yearly'].forEach(function (k) {
+      probe.repeat = k;
+      f.repeat.querySelector('option[value="' + k + '"]').textContent = Recur.describe(probe);
+    });
+    $('repeatUntilField').hidden = !f.repeat.value;
+    f.repeatUntil.min = f.date.value || '';
+    if (f.repeatUntil.value && f.repeatUntil.value < f.date.value) f.repeatUntil.value = '';
+  }
+  $('addForm').elements.repeat.addEventListener('change', function () { updateRepeatUI(); updateRemindUI(); });
+  $('addForm').elements.date.addEventListener('change', updateRepeatUI);
+
   // ── 알림 입력 UI ─────────────────────────────────────
   function updateRemindUI() {
     var f = $('addForm').elements;
@@ -525,6 +568,12 @@
     var p = $('remindPreview');
     p.classList.remove('past');
     if (!at) { p.textContent = ''; return; }
+    if (f.repeat.value) {
+      var before = Recur.diffDays(at.slice(0, 10), f.date.value);
+      p.textContent = '🔔 반복될 때마다 ' + (before > 0 ? before + '일 전 ' : before < 0 ? -before + '일 후 ' : '당일 ') +
+        fmtTime(at.slice(11, 16)) + '에 카톡으로 알려드려요';
+      return;
+    }
     if (at <= nowLocal()) {
       p.classList.add('past');
       p.textContent = '⚠︎ ' + fmtRemind(at) + ' — 이미 지난 시각이에요';
@@ -681,22 +730,53 @@
   // ── CRUD ─────────────────────────────────────────────
   function findItem(id) { return data.items.filter(function (it) { return it.id === id; })[0]; }
 
-  function toggleDone(id) {
-    var it = findItem(id);
+  /** 완료 체크 — 반복 일정은 그 회차만 */
+  function toggleDone(o) {
+    var it = findItem(baseOf(o).id);
     if (!it) return;
-    it.done = !it.done;
+    if (o._base) {
+      it.doneDates = it.doneDates || {};
+      if (it.doneDates[o._occ]) delete it.doneDates[o._occ]; else it.doneDates[o._occ] = true;
+    } else {
+      it.done = !it.done;
+    }
     it.updatedAt = Date.now();
     persist(); render();
   }
 
-  function removeItem(id) {
-    var it = findItem(id);
-    if (!it || !confirm('"' + it.title + '" 일정을 삭제할까요?')) return;
-    data.items = data.items.filter(function (x) { return x.id !== id; });
-    if (editingId === id) resetForm();
+  function deleteSeries(it) {
+    data.items = data.items.filter(function (x) { return x.id !== it.id; });
+    if (editingId === it.id) resetForm();
     persist(); render();
     toast('삭제했어요.');
   }
+
+  /** 삭제 — 반복 일정은 "이 날짜만 / 모든 반복" 선택 */
+  var pendingDelete = null;
+  function removeItem(o) {
+    var it = findItem(baseOf(o).id);
+    if (!it) return;
+    if (!o._base) {
+      if (confirm('"' + it.title + '" 일정을 삭제할까요?')) deleteSeries(it);
+      return;
+    }
+    pendingDelete = { it: it, occ: o._occ };
+    $('repeatDelText').textContent = '"' + it.title + '"은(는) ' + Recur.describe(it) + ' 반복 일정이에요. ' +
+      shortDate(o._occ) + ' 하루만 지울까요, 모든 반복을 지울까요?';
+    $('repeatDelDialog').showModal();
+  }
+  $('repeatDelDialog').addEventListener('close', function () {
+    var pd = pendingDelete; pendingDelete = null;
+    if (!pd) return;
+    var v = $('repeatDelDialog').returnValue;
+    if (v === 'all') deleteSeries(pd.it);
+    else if (v === 'one') {
+      pd.it.skipDates = (pd.it.skipDates || []).concat([pd.occ]);
+      pd.it.updatedAt = Date.now();
+      persist(); render();
+      toast(shortDate(pd.occ) + ' 일정만 삭제했어요.');
+    }
+  });
 
   function startEdit(id) {
     var it = findItem(id);
@@ -716,9 +796,12 @@
     f.remindDate.value = ra ? ra.slice(0, 10) : '';
     f.memo.value = it.memo || '';
     autoGrowMemo();
+    f.repeat.value = Recur.isRepeating(it) ? it.repeat : '';
+    f.repeatUntil.value = Recur.isRepeating(it) ? (it.repeatUntil || '') : '';
+    updateRepeatUI();
     fillCategorySelect(catById(it.categoryId) ? it.categoryId : '');
     updateRemindUI();
-    $('formTitle').textContent = '일정 수정';
+    $('formTitle').textContent = Recur.isRepeating(it) ? '반복 일정 수정 (모든 회차에 적용)' : '일정 수정';
     $('submitBtn').textContent = '저장';
     $('cancelEdit').hidden = false;
     f.title.focus();
@@ -736,6 +819,7 @@
     setTime('remindTime', DEFAULT_REMIND_TIME);
     autoGrowMemo();
     updateSpanUI();
+    updateRepeatUI();
     updateRemindUI();
     $('formTitle').textContent = '일정 추가';
     $('submitBtn').textContent = '추가';
@@ -759,6 +843,8 @@
       remind: remindAt ? remind : -1,
       remindAt: remindAt,
       categoryId: catById(f.category.value) ? f.category.value : '',
+      repeat: Recur.LABEL[f.repeat.value] ? f.repeat.value : '',
+      repeatUntil: Recur.LABEL[f.repeat.value] && f.repeatUntil.value >= f.date.value ? f.repeatUntil.value : '',
       memo: f.memo.value.trim(),
       updatedAt: Date.now()
     };
@@ -775,7 +861,7 @@
       msg = '추가했어요.';
     }
     var targetDate = values.date;
-    if (remindAt && remindAt <= nowLocal()) msg += ' (알림 시각이 이미 지나서 카톡은 보내지 않아요)';
+    if (remindAt && remindAt <= nowLocal() && !values.repeat) msg += ' (알림 시각이 이미 지나서 카톡은 보내지 않아요)';
     resetForm();
     persist();
     select(targetDate, true);
