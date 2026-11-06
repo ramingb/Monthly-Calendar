@@ -99,6 +99,8 @@ node scripts/kakao-get-token.js <REST_API_KEY> <code>
    **Repository permissions → Secrets: Read and write**
 2. 저장소 **Settings → Secrets and variables → Actions**에 `SECRETS_TOKEN` 이름으로 등록
 3. 이 GitHub 토큰의 만료일 전에 새로 만들어 `SECRETS_TOKEN`을 교체 (만료되면 자동 갱신이 실패하고 Actions에 오류 표시)
+4. 매일 04시·16시에 `SECRETS_TOKEN`이 시크릿을 읽고 쓸 수 있는지 점검하고(`SECRETS_TOKEN_CHECK` 시크릿에 점검 시각 기록),
+   만료 30일 전부터 경고를 띄웁니다. 바로 점검하려면 Actions → Run workflow에서 `check_tokens`를 체크하세요.
 
 ### 5) 테스트
 

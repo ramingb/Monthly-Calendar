@@ -10,6 +10,10 @@ on:
         description: '전송 없이 메시지만 확인'
         type: boolean
         default: false
+      check_tokens:
+        description: '자동 갱신용 SECRETS_TOKEN 지금 점검'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -68,4 +72,35 @@ jobs:
             rm -f "$TOKEN_FILE"
             echo "::error::KAKAO_REFRESH_TOKEN 저장 실패 — SECRETS_TOKEN의 권한(Secrets: Read and write)과 만료일을 확인하세요. 다음 실행에서 다시 시도합니다."
             exit 1
+          fi
+      - name: 자동 갱신용 토큰 점검 (매일 04시·16시)
+        # SECRETS_TOKEN이 시크릿을 읽고 쓸 수 있는지, 만료가 가까운지 미리 확인
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_TOKEN }}
+          FORCE: ${{ inputs.check_tokens && '1' || '' }}
+        run: |
+          H=$(TZ=Asia/Seoul date +%H); M=$(TZ=Asia/Seoul date +%M)
+          if [ -z "$FORCE" ]; then
+            { [ "$H" = 04 ] || [ "$H" = 16 ]; } && [ "${M#0}" -lt 10 ] || exit 0
+          fi
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::SECRETS_TOKEN 시크릿이 없습니다. 카카오 리프레시 토큰 자동 갱신이 동작하지 않습니다."
+            exit 1
+          fi
+          if ! hdr=$(gh api -i "repos/$GITHUB_REPOSITORY/actions/secrets/public-key" 2>&1); then
+            echo "::error::SECRETS_TOKEN으로 시크릿을 읽을 수 없습니다 — 토큰 만료, 저장소 선택, Secrets 권한을 확인하세요. ($(printf '%s' "$hdr" | tail -1))"
+            exit 1
+          fi
+          exp=$(printf '%s' "$hdr" | tr -d '\r' | grep -i '^github-authentication-token-expiration:' | cut -d' ' -f2- || true)
+          if ! gh secret set SECRETS_TOKEN_CHECK --repo "$GITHUB_REPOSITORY" --body "$(date -u +%FT%TZ)"; then
+            echo "::error::SECRETS_TOKEN에 쓰기 권한이 없습니다 — Secrets 권한을 'Read and write'로 바꿔 주세요."
+            exit 1
+          fi
+          echo "✅ SECRETS_TOKEN 정상 (시크릿 읽기·쓰기 확인)${exp:+ · 만료: $exp}" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ -n "$exp" ]; then
+            days=$(( ( $(date -d "$exp" +%s) - $(date +%s) ) / 86400 ))
+            if [ "$days" -lt 30 ]; then
+              echo "::warning::SECRETS_TOKEN이 ${days}일 후 만료됩니다. 새로 만들어 SECRETS_TOKEN을 교체하세요."
+            fi
           fi
