@@ -63,24 +63,26 @@
           <input type="hidden" name="type" value="appt">
           <input type="text" name="title" placeholder="제목 (예: 치과 예약)" required maxlength="80">
           <textarea name="memo" rows="3" placeholder="관련 메모 (선택) — 준비물, 주소, 연락처 등 자유롭게 적어 두세요"></textarea>
-          <div class="row">
-            <label class="field">시작일<input type="date" name="date" required></label>
-            <label class="field"><span class="field-label">종료일 <small id="spanHint" class="span-hint"></small></span><input type="date" name="endDate"></label>
-          </div>
-          <div class="field">시간
-            <input type="hidden" name="time" value="">
-            <span class="tp" data-for="time" data-optional="1"></span>
-          </div>
-          <div class="row">
-            <label class="field">반복
-              <select name="repeat">
-                <option value="">반복 안 함</option>
-                <option value="weekly">매주</option>
-                <option value="monthly">매월</option>
-                <option value="yearly">매년</option>
-              </select>
-            </label>
-            <label class="field" id="repeatUntilField" hidden><span class="field-label">반복 종료 <small class="span-hint">(선택)</small></span><input type="date" name="repeatUntil"></label>
+          <div class="form-group when-group" aria-label="날짜·시간·반복">
+            <div class="row">
+              <label class="field">시작일<input type="date" name="date" required></label>
+              <label class="field"><span class="field-label">종료일 <small id="spanHint" class="span-hint"></small></span><input type="date" name="endDate"></label>
+            </div>
+            <div class="field">시간
+              <input type="hidden" name="time" value="">
+              <span class="tp" data-for="time" data-optional="1"></span>
+            </div>
+            <div class="row">
+              <label class="field">반복
+                <select name="repeat">
+                  <option value="">반복 안 함</option>
+                  <option value="weekly">매주</option>
+                  <option value="monthly">매월</option>
+                  <option value="yearly">매년</option>
+                </select>
+              </label>
+              <label class="field" id="repeatUntilField" hidden><span class="field-label">반복 종료 <small class="span-hint">(선택)</small></span><input type="date" name="repeatUntil"></label>
+            </div>
           </div>
           <div class="remind-box">
             <label class="field">카톡 알림
