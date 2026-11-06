@@ -4,6 +4,8 @@
   --surface-2: #f1f3f8;
   --line: #e3e6ee;
   --grid: #d5d9e3;
+  --group-bg: #eef3fd;
+  --group-line: #d6e2fb;
   --text: #1d2230;
   --muted: #6b7385;
   --primary: #2f6fed;
@@ -22,7 +24,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #12141a; --surface: #1b1e27; --surface-2: #232733; --line: #2e3342; --grid: #3a4053;
+    --bg: #12141a; --surface: #1b1e27; --surface-2: #232733; --line: #2e3342; --grid: #3a4053; --group-bg: #1f2738; --group-line: #2c3a56;
     --text: #e8ebf3; --muted: #9aa2b5; --primary: #6c9bff; --primary-soft: #23304d;
     --sun: #ff6b70; --sat: #6c9bff; --holiday-bg: #3a2226;
     --appt: #a58cff; --appt-soft: #2e2747; --todo: #3fd0a4; --todo-soft: #1d3a32;
@@ -31,7 +33,7 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #12141a; --surface: #1b1e27; --surface-2: #232733; --line: #2e3342; --grid: #3a4053;
+  --bg: #12141a; --surface: #1b1e27; --surface-2: #232733; --line: #2e3342; --grid: #3a4053; --group-bg: #1f2738; --group-line: #2c3a56;
   --text: #e8ebf3; --muted: #9aa2b5; --primary: #6c9bff; --primary-soft: #23304d;
   --sun: #ff6b70; --sat: #6c9bff; --holiday-bg: #3a2226;
   --appt: #a58cff; --appt-soft: #2e2747; --todo: #3fd0a4; --todo-soft: #1d3a32;
@@ -119,7 +121,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .chip.done { text-decoration: line-through; opacity: .5; }
 .more { font-size: .7rem; color: var(--muted); padding-left: 4px; }
 
-.legend { display: flex; gap: 14px; justify-content: flex-end; font-size: .78rem; color: var(--muted); padding: 8px 4px 2px; }
+.legend { display: flex; gap: 14px; justify-content: flex-end; font-size: .78rem; color: var(--muted); padding: 2px 4px 10px; }
 .legend span { display: inline-flex; align-items: center; gap: 5px; }
 .dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 .dot.appt { background: var(--appt); } .dot.todo { background: var(--todo); } .dot.holiday { background: var(--sun); }
@@ -302,7 +304,7 @@ input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-rad
 .tp { display: flex; gap: 6px; }
 .tp select { flex: 1; min-width: 0; width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 8px 10px; color: var(--text); font-size: .92rem; }
 .tp select:disabled { opacity: .45; }
-.tp .tp-ap { flex: 1.25; }
+.tp .tp-ap { flex: 1.6; }
 
 /* ── 메모 있음 표시 ── */
 .chip { display: flex; align-items: center; gap: 2px; }
@@ -313,4 +315,13 @@ input[type=color]::-moz-color-swatch { border: 2px solid var(--line); border-rad
 @media (max-width: 600px) {
   .chip-memo { display: none; }
   .memo-flag { display: inline; font-size: .58rem; margin-left: auto; line-height: 1; }
+}
+
+/* ── 반복 일정 삭제 선택 ── */
+.form-actions.wrap { flex-wrap: wrap; }
+
+/* ── 일정 입력: 날짜·시간·반복 묶음 ── */
+.form-group {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--group-bg); border: 1px solid var(--group-line); border-radius: 12px; padding: 10px 12px 12px;
 }

@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const H = require('../js/holidays.js');
+const R = require('../js/recur.js');
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 const DATA_FILE = path.join(__dirname, '..', 'data', 'schedule.json');
@@ -70,10 +71,36 @@ function relDay(n) {
 }
 
 /** 지금 보낼 알림 목록: 알림 시각 ≤ 지금, 최근 CATCH_UP_HOURS 이내, 미완료, 미전송 */
+/** 반복 일정은 지금 알림을 보낼 수 있는 회차들로 펼침 (회차별 완료·삭제 반영) */
+function expandForReminders(items, now) {
+  const out = [];
+  for (const it of items) {
+    if (!it || !it.id || !it.date) continue;
+    if (!R.isRepeating(it)) { out.push(it); continue; }
+    const baseAt = remindAtOf(it);
+    if (!baseAt) continue;
+    // 알림이 일정보다 며칠 앞서는지 → 그만큼 뒤의 회차가 지금 알림 대상
+    const lead = R.diffDays(baseAt.slice(0, 10), it.date);
+    const d0 = now.slice(0, 10);
+    const from = R.addDays(d0, lead - 1);
+    const to = R.addDays(d0, lead + 1);
+    const dur = R.diffDays(it.date, it.endDate && it.endDate > it.date ? it.endDate : it.date);
+    for (const s of R.occurrenceStarts(it, from, to)) {
+      if (s < from) continue; // 여러 날 일정이 겹쳐 들어온 이전 회차 제외
+      out.push({
+        ...it, date: s, endDate: dur ? R.addDays(s, dur) : '',
+        remindAt: R.remindAtFor(baseAt, it.date, s),
+        done: !!(it.doneDates && it.doneDates[s]),
+      });
+    }
+  }
+  return out;
+}
+
 function dueItems(items, now, sent) {
   const from = addHours(now, -CATCH_UP_HOURS);
-  return items
-    .filter((it) => it && it.id && it.date && !it.done)
+  return expandForReminders(items, now)
+    .filter((it) => !it.done)
     .map((it) => ({ ...it, at: remindAtOf(it) }))
     .filter((it) => it.at && it.at <= now && it.at > from && !sent[sentKey(it, it.at)])
     .map((it) => ({ ...it, left: diffDays(now.slice(0, 10), it.date) }))
@@ -89,7 +116,8 @@ function buildLines(items, categories = []) {
     const range = multi ? `${label(it.date)}~${label(it.endDate)}(${diffDays(it.date, it.endDate) + 1}일)` : label(it.date);
     const when = `${range}${it.time ? ' ' + it.time : ''}`;
     const cat = catName[it.categoryId] ? `[${catName[it.categoryId]}] ` : '';
-    return `${icon} [${relDay(it.left)}] ${when} ${cat}${it.title}${hol.length ? ` (${hol[0]})` : ''}`;
+    const rep = R.isRepeating(it) ? ' 🔁' : '';
+    return `${icon} [${relDay(it.left)}] ${when} ${cat}${it.title}${rep}${hol.length ? ` (${hol[0]})` : ''}`;
   });
 }
 
