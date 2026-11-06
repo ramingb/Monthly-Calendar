@@ -90,6 +90,16 @@ node scripts/kakao-get-token.js <REST_API_KEY> <code>
 3. 이후 일정을 추가·수정·완료할 때마다 `data/schedule.json`에 자동 업로드됩니다.
    다른 기기에서 같은 설정을 하면 열 때 최신 일정을 불러옵니다.
 
+### 토큰 자동 갱신 (권장)
+
+카카오는 리프레시 토큰 만료가 1개월 미만일 때 새 토큰을 줍니다. 알림 워크플로가 매일 04시·16시(한국시간)에
+토큰을 갱신하다가 새 토큰을 받으면 `KAKAO_REFRESH_TOKEN` 시크릿을 **자동으로 교체**합니다.
+
+1. [GitHub 토큰 생성](https://github.com/settings/personal-access-tokens/new) — 이름 `kakao-secrets`, 이 저장소만 선택,
+   **Repository permissions → Secrets: Read and write**
+2. 저장소 **Settings → Secrets and variables → Actions**에 `SECRETS_TOKEN` 이름으로 등록
+3. 이 GitHub 토큰의 만료일 전에 새로 만들어 `SECRETS_TOKEN`을 교체 (만료되면 자동 갱신이 실패하고 Actions에 오류 표시)
+
 ### 5) 테스트
 
 **Actions → 카카오톡 일정 알림 → Run workflow** 로 바로 실행할 수 있습니다.
@@ -126,8 +136,8 @@ NOW=2026-11-05T08:10 DRY_RUN=1 node scripts/send-kakao-reminders.js
 
 - **공개 저장소**라면 `data/schedule.json`(일정 내용)도 공개됩니다. 개인 일정은 비공개 저장소를 권장합니다.
   (비공개 저장소의 GitHub Pages는 유료 플랜 필요 — 이 경우 `index.html`을 PC에서 직접 열어 사용해도 됩니다.)
-- 카카오 리프레시 토큰은 약 2개월간 유효합니다. 만료가 가까워지면 Actions 실행 결과에 경고가 표시되니
-  2)~3) 단계를 다시 진행해 시크릿을 교체하세요.
+- 카카오 리프레시 토큰은 약 2개월간 유효합니다. 아래 "토큰 자동 갱신"을 설정하면 직접 교체할 필요가 없고,
+  설정하지 않았다면 만료 전에 2)~3) 단계를 다시 진행해 시크릿을 교체하세요.
 - GitHub 토큰은 이 브라우저의 localStorage에만 저장되며 GitHub API 호출에만 사용됩니다.
 - GitHub Actions 예약 실행은 서버 사정에 따라 수 분~수십 분 늦어질 수 있습니다.
 - **비공개 저장소**는 Actions 무료 사용량(월 2,000분)이 있습니다. 15분마다 실행하면 한 달 약 2,900분이 쓰이므로,

@@ -11,6 +11,11 @@
  *   CALENDAR_URL         메시지 버튼이 열 주소 (예: GitHub Pages 주소)
  *   DRY_RUN=1            실제 전송 없이 메시지만 출력
  *   NOW=YYYY-MM-DDTHH:MM 기준 시각(한국시간) 강제 지정 (테스트용)
+ *   NEW_REFRESH_TOKEN_FILE 카카오가 새 리프레시 토큰을 주면 이 파일에 저장
+ *                        (워크플로가 읽어서 KAKAO_REFRESH_TOKEN 시크릿을 자동 교체)
+ *
+ * 카카오는 리프레시 토큰 만료가 1개월 미만일 때 토큰을 갱신하면 새 리프레시 토큰을 줍니다.
+ * 알림이 없는 날에도 하루 두 번(TOKEN_CHECK_HOURS) 토큰을 갱신해 이 기회를 놓치지 않습니다.
  *
  * Node 18+ (내장 fetch) 필요.
  */
@@ -27,6 +32,7 @@ const SENT_FILE = path.join(__dirname, '..', 'data', 'sent.json');
 const DEFAULT_REMIND_TIME = '08:00';
 const CATCH_UP_HOURS = 12; // 실행이 늦어지거나 빠져도 이 시간 안의 알림은 보냄
 const KEEP_SENT_DAYS = 60;
+const TOKEN_CHECK_HOURS = ['04', '16']; // 알림이 없어도 토큰 갱신을 시도하는 시각(한국시간)
 const MAX_TEXT = 200; // 카카오 텍스트 템플릿 최대 길이
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -150,11 +156,13 @@ async function refreshAccessToken() {
   if (!res.ok || !json.access_token) throw new Error(`토큰 갱신 실패: ${JSON.stringify(json)}`);
   if (json.refresh_token) {
     // 리프레시 토큰 만료가 1개월 미만이면 새 토큰이 발급됨 → 시크릿 교체 필요
-    console.log('::warning::카카오 리프레시 토큰이 갱신되었습니다. README 안내에 따라 KAKAO_REFRESH_TOKEN 시크릿을 교체하세요.');
     console.log(`::add-mask::${json.refresh_token}`);
-    if (process.env.GITHUB_STEP_SUMMARY) {
-      fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-        '⚠️ 카카오 리프레시 토큰이 곧 만료됩니다. `node scripts/kakao-get-token.js` 로 새 토큰을 발급해 시크릿을 교체하세요.\n');
+    const days = Math.round((json.refresh_token_expires_in || 0) / 86400);
+    if (process.env.NEW_REFRESH_TOKEN_FILE) {
+      fs.writeFileSync(process.env.NEW_REFRESH_TOKEN_FILE, json.refresh_token, { mode: 0o600 });
+      console.log(`카카오가 새 리프레시 토큰을 발급했습니다 (약 ${days}일 유효). 다음 단계에서 시크릿에 저장합니다.`);
+    } else {
+      console.log('::warning::카카오 리프레시 토큰이 갱신되었지만 저장할 곳이 없습니다. KAKAO_REFRESH_TOKEN 시크릿을 직접 교체하세요.');
     }
   }
   return json.access_token;
@@ -199,18 +207,21 @@ async function main() {
   let sent = loadJSON(SENT_FILE, {});
   const items = dueItems(Array.isArray(data.items) ? data.items : [], now, sent);
 
-  console.log(`기준 ${now} (KST) · 알림 대상 ${items.length}건`);
-  if (!items.length) return;
+  const tokenCheck = TOKEN_CHECK_HOURS.includes(now.slice(11, 13));
+  console.log(`기준 ${now} (KST) · 알림 대상 ${items.length}건${tokenCheck ? ' · 토큰 점검 시간' : ''}`);
+  if (!items.length && !tokenCheck) return;
 
   const header = `🔔 일정 알림 · ${label(now.slice(0, 10))}`;
-  const messages = chunk(header, buildLines(items, Array.isArray(data.categories) ? data.categories : []));
+  const messages = items.length ? chunk(header, buildLines(items, Array.isArray(data.categories) ? data.categories : [])) : [];
 
   if (process.env.DRY_RUN) { messages.forEach((m) => console.log('---\n' + m)); return; }
 
   for (const k of ['KAKAO_REST_API_KEY', 'KAKAO_REFRESH_TOKEN']) {
     if (!process.env[k]) throw new Error(`${k} 환경변수가 없습니다.`);
   }
+  // 알림이 없어도 토큰 점검 시간엔 갱신 → 만료 1개월 전부터 새 리프레시 토큰을 받아 자동 저장
   const token = await refreshAccessToken();
+  if (!items.length) { console.log('카카오 토큰 점검 완료'); return; }
   for (const m of messages) await sendMemo(token, m);
 
   const sentAt = new Date().toISOString();
