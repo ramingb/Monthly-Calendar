@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": 1793929279272,
+  "updatedAt": 1793950911237,
   "categories": [
     {
       "id": "cmw35ck3xw730at",
@@ -68,6 +68,23 @@
       "id": "mw4b6asmrc0t6u",
       "done": false,
       "createdAt": 1793929279270
+    },
+    {
+      "type": "appt",
+      "title": "GitHub 토큰 교체 (카톡 알림 유지)",
+      "date": "2027-10-30",
+      "endDate": "",
+      "time": "",
+      "remind": 0,
+      "remindAt": "2027-10-30T09:00",
+      "categoryId": "",
+      "repeat": "",
+      "repeatUntil": "",
+      "memo": "2027-11-06에 GitHub 토큰이 만료될 수 있어요. 그 전에 새로 만들어 교체하세요.\n\n1) kakao-secrets (카카오 토큰 자동 갱신용) — 만료 2027-11-06 0시\n - https://github.com/settings/personal-access-tokens 에서 새로 만들기\n - 저장소: ramingb/Monthly-Calendar만, 권한: Secrets → Read and write, 기간 1년\n - https://github.com/ramingb/Monthly-Calendar/settings/secrets/actions 에서 SECRETS_TOKEN → Update\n\n2) cron-kakao (cron-job.org 10분 실행용) — 만든 날 정한 만료일 확인\n - 같은 방법으로 새로 만들기 (권한: Actions → Read and write)\n - cron-job.org → 카톡 일정 알림 → EDIT → ADVANCED → Authorization 값을 \"Bearer 새토큰\"으로 교체\n\n3) 캘린더 ⚙︎ 설정의 GitHub 토큰 (일정 동기화용)도 만료일이 가까우면 함께 교체\n\n확인: GitHub Actions에서 Run workflow → check_tokens 체크 → \"✅ SECRETS_TOKEN 정상\" 확인",
+      "updatedAt": 1793950911237,
+      "id": "tokrenew911237",
+      "done": false,
+      "createdAt": 1793950911237
     }
   ]
 }
